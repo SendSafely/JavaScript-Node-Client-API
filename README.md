@@ -27,7 +27,7 @@ sendSafely.verifyCredentials(function(email)  {
 *You will need to generate your own API_KEY and API_SECRET from the API Keys section of your Profile page when logged into your SendSafely portal.*
 
 ## Examples
-Please refer to our [Developer Website](https://sendsafely.github.io) to familiarize yourself with the core SendSafely API and common operations. 
+Please refer to our [Developer Website](https://sendsafely.github.io) to familiarize yourself with the core SendSafely API and common operations. See our [examples](https://github.com/SendSafely/JavaScript-Node-Client-API/tree/master/examples/CreateNewPackage) in GitHub for working examples of how to use the SendSafely JavaScript API for Node.js.  
 
 ## Support
 For support, please contact support@sendsafely.com. 
