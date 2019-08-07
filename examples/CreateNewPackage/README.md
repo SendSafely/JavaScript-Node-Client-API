@@ -16,7 +16,12 @@ Update the SendSafely object in CreateNewPackage.js with your SendSafely organiz
 var sendSafely = new SendSafely("https://ORGANIZATION_HOST", "API_KEY", "API_SECRET");
 ```
 
-*You can generate your own API_KEY and API_SECRET from the API Keys section of your Profile page when logged into your SendSafely portal.* 
+*You can generate your own API_KEY and API_SECRET from the API Keys section of your Profile page when logged into your SendSafely portal.*
+
+Run CreateNewPackage sample application using Node
+```console
+node CreateNewPackage.js
+``` 
 
 ## Support
 For support, please contact support@sendsafely.com. 
