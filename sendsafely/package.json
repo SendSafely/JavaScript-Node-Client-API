@@ -1,0 +1,33 @@
+{
+  "name": "@sendsafely/sendsafely",
+  "version": "1.0.6",
+  "main": "SendSafely.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "SendSafely",
+  "license": "",
+  "description": "The SendSafely JavaScript SDK for Node.js lets you integrate SendSafely secure data transfer capabilities directly into your Node.js application.",
+  "dependencies": {
+    "jquery": "^3.4.1",
+    "openpgp": "^4.5.5",
+    "sjcl": "^1.0.8",
+    "window": "^4.2.5",
+    "xmlhttprequest": "^1.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SendSafely/JavaScript-Node-Client-API.git"
+  },
+  "keywords": [
+    "sendsafely",
+    "secure file transfer",
+    "end to end encryption",
+    "platform integration"
+  ],
+  "bugs": {
+    "url": "https://github.com/SendSafely/JavaScript-Node-Client-API/issues"
+  },
+  "homepage": "https://github.com/SendSafely/JavaScript-Node-Client-API#readme",
+  "devDependencies": {}
+}
