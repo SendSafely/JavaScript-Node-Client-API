@@ -3231,6 +3231,7 @@ function EncryptMessage (eventHandler) {
           break;
         case 'done':
           if(callback != undefined) {
+            window.removeEventListener('message', callbackFunction, false);
             callback(data.data);
           }
           break;
