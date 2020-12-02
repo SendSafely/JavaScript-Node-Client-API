@@ -59,9 +59,9 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   this.request = new SignedRequest(myself.eventHandler, url, apiKeyId, apiKeySecret, myself.requestAPI);
 
 	//Main API functions
-	//AJAX Functions
+	//Functions
   /**
-   * AJAX function to verify the version of the application against the server.
+   * Function to verify the version of the application against the server.
    * @param {string} An identifier describing the API. If none is supplied, the default API one will be used.
    * @param {function} Callback which will be called when the operation is done. function(version)
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
@@ -96,7 +96,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * AJAX Function that is used to validate the APIKeys to the server.
+	 * Function that is used to validate the APIKeys to the server.
    *
 	 * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
@@ -110,7 +110,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
   /**
-   * AJAX function to fetch information about the authenticated user.
+   * Function to fetch information about the authenticated user.
    * @param {function} failure callback Function is called if a failure happens.
    * @param {function} success_callback Function is called when data is receved from the server with no errors.
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
@@ -128,7 +128,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * AJAX Function that is used to remove a file from a package.
+	 * Function that is used to remove a file from a package.
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
 	 * @param {string} fileId The value used to specify the file to be removed from the package.
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
@@ -147,12 +147,27 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
       new DeleteFile(myself.eventHandler, myself.request).execute(packageId, fileId, myself.async, finished);
     }, 'Deleting file failed');
 	};
-	
-	/**
-	 * AJAX Function that is used to remove a file from a package.
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-	 * @param {string} recipientId The value is used to specify the recipiant the phone number will be attributes to.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+
+    this.deleteFileWithDirectory = function (packageId, fileId, directoryId, finished) {
+
+        try { this.checkAPIInitialized();}
+        catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+        myself.executor.run(function() {
+            if(myself.uploadHandler !== undefined) {
+                myself.uploadHandler.abort(fileId);
+            }
+
+            new DeleteFileWithDirectory(myself.eventHandler, myself.request).execute(packageId, fileId, directoryId, myself.async, finished);
+        }, 'Deleting file failed');
+    };
+
+    /**
+	 * Function that is used to remove a recipient from a package.
+	 * @param {string} packageId The value used to specify the package to perform the operation.
+	 * @param {string} recipientId The value is used to specify the recipient identifier associated with the recipient to remove.
+     * @param {function} finished callback to execute after the operation has completed.
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */
 	this.removeRecipient = function (packageId, recipientId, finished) {
@@ -164,9 +179,9 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
 	/**
-	 * AJAX Function that is used to get Information about the enterprise you and connected to.
+	 * Function that is used to get Information about the enterprise you and connected to.
 	 *
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */
 	this.enterpriseInfo = function (finished) {
@@ -178,12 +193,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
 	/**
-	 * AJAX Function that is used to add an email to a package represented by the packageId.
+	 * Function that is used to add an email to a package represented by the packageId.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
 	 * @param {object} data The data that will be transferd to the server
 	 * @param {string} data.email the Email of the recipient.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */
 	this.addRecipient = function (packageId, email, keyCode, finished) {
@@ -196,8 +211,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     handler.execute(packageId, email, keyCode, myself.async, finished);
 	};
 
+	this.addRecipientWithSMS = function (packageId, email, keycode, phonenumber, countryCode, finished) {
+	  try { this.checkAPIInitialized();}
+	  catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+      myself.executor.run(function() {
+    	new AddRecipientWithSMS(myself.eventHandler, myself.request).execute(packageId, email, phonenumber, countryCode, myself.async, finished);
+  	  }, 'Failed to add recipient');
+	};
+
   /**
-   * AJAX Function that is used to adds a list of emails to a package represented by the packageId.
+   * Function that is used to adds a list of emails to a package represented by the packageId.
    *
    * @param {string} packageId The value used to specify the package to add a recipent to.
    * @param {Array.<string>} a list of emails to be added.
@@ -219,15 +242,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * AJAX Function that is used to add an phonenumber to an emailaddress to the package represented by the packageId.
+	 * Function that is used to add an phonenumber to an emailaddress to the package represented by the packageId.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
 	 * @param {string} recipientId The value is uded to specify the recipiant the phone number will be attributes to.
 	 * @param {string} phonenumber The phone number to be associated with the recipient.
 	 * @param {string} countryCode The countrycode of the phonenumber
-   * @param {function} failureCb callback Function is called if a failure happens.
-   * @param {function} finished Function is called when data is receved from the server with no errors.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @param {function} failureCb callback Function is called if a failure happens.
+     * @param {function} finished Function is called when data is receved from the server with no errors.
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 */
 	this.addRecipientPhonenumber = function (packageId, recipientId, phonenumber, countryCode, finished) {
 
@@ -249,10 +272,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * AJAX Function that to set the package as finalized.
+	 * Function that to set the package as finalized.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipient to.
-   * @event {sendsafely.error} Raised if any error occurred
+     * @event {sendsafely.error} Raised if any error occurred
 	 * @return {promise}
 	 */
 	this.finalizePackage = function (packageId, packageCode, keyCode, finished) {
@@ -302,7 +325,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
     
   /**
-   * AJAX Function that to save the message on the server.
+   * Function that to save the message on the server.
    *
    * @param {string} packageId The value used to specify the package to add a recipent to.
    * @param {string} message The message to send.
@@ -324,10 +347,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * AJAX Function that deletes a package that has not been finalized.
+	 * Function that deletes a package that has not been finalized.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */
 	this.deleteTempPackage = function (packageId, finished) {
@@ -339,7 +362,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
   /**
-   * AJAX Function that deletes a package.
+   * Function that deletes a package.
    *
    * @param {string} packageId to be deleted
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
@@ -353,11 +376,40 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new DeletePackage(myself.eventHandler, myself.request).execute(packageId, myself.async, finished);
   };
 
+  this.renameDirectory = function (packageId, directoryId, directoryName, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+    new UpdateDirectoryName(myself.eventHandler, myself.request).execute(packageId, directoryId, directoryName,myself.async, finished);
+  };
+
+  this.getDirectory = function (packageId, directoryId, directoryIndex, fileIndex, sortField, sortOrder, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    new GetDirectory(myself.eventHandler, myself.request).execute(packageId, directoryId, directoryIndex, fileIndex, sortField, sortOrder, myself.async, finished);
+  };
+
+  this.deleteDirectory = function (packageId, directoryId, finished) {
+
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    myself.executor.run(function() {
+      if(myself.uploadHandler !== undefined || myself.uploadHandler1 !== undefined) {
+        if(myself.uploadHandler !== undefined)
+          myself.uploadHandler.abort(directoryId);
+        else
+          myself.uploadHandler1.abort(directoryId);
+      }
+
+      new DeleteDirectory(myself.eventHandler, myself.request).execute(packageId, directoryId, myself.async, finished);
+    }, 'Deleting Directory failed');
+  };
 	/**
-	 * AJAX Function queries information about the specified package.
+	 * Function queries information about the specified package.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */	
 	this.packageInformation = function (packageId, finished) {
@@ -369,7 +421,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
   /**
-   * AJAX Function queries information about the specified package.
+   * Function queries information about the specified package.
    *
    * @param {string} packageId The value used to specify the package to add a recipent to.
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
@@ -383,13 +435,61 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new GetPackageInformation(myself.eventHandler, myself.request).executeFromLink(link, myself.async, finished);
   };
 
+    this.getActivePackages = function(rowIndex, finished){
+        try { this.checkAPIInitialized();}
+        catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+        new GetSentPackages(myself.eventHandler, myself.request).execute(rowIndex, "", myself.async, finished);
+    }
+
+    this.getReceivedPackages = function(rowIndex, finished){
+        try { this.checkAPIInitialized();}
+        catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+        new GetReceivedPackages(myself.eventHandler, myself.request).execute(rowIndex, "", myself.async, finished);
+    }
+
+    this.getArchivedPackages = function (rowIndex, finished) {
+        try { this.checkAPIInitialized();}
+        catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+        new GetArchivedPackages(myself.eventHandler, myself.request).execute(rowIndex, "", myself.async, finished);
+    }
+
+  this.getActivityLog = function(packageId, rowIndex, finished){
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+    var postData = {};
+    postData['rowIndex'] = rowIndex==undefined?0:rowIndex;
+    new GetPackageActivityLog(myself.eventHandler, myself.request).execute(packageId, postData, "", myself.async, finished);
+  }
+
+  this.getRecipient = function (packageId, recipientId, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    new GetRecipient(myself.eventHandler, myself.request).execute(packageId, recipientId, myself.async, finished);
+  };
+
+  this.getFileInformation = function (packageId, directoryId, fileId, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    new GetFileFromDirectory(myself.eventHandler, myself.request).execute(packageId, directoryId, fileId, myself.async, finished);
+  };
+
+  this.updateRecipientRole = function (packageId, recipientId, roleName, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    new UpdateRole(myself.eventHandler, myself.request).execute(packageId, recipientId, roleName, myself.async, finished);
+  };
+
+
 	/**
-	 * AJAX Function queries information about the specified package.
+	 * Function queries information about the specified package.
 	 * 
 	 * @param {string} packageId The value used to specify the package to add a recipent to.
 	 * @param {object} data
 	 * @param {int} data.life
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
 	 * @return {promise}
 	 */		
 	this.updatePackage = function (packageId, data, finished){
@@ -399,9 +499,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
 		new UpdatePackage(myself.eventHandler, myself.request).execute(packageId, data, myself.async, finished);
 	};
+	
+  this.updateFile = function (packageId, fileId, fileName, finished) {
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+    new UpdateFileName(myself.eventHandler, myself.request).execute(packageId, fileId, fileName, myself.async, finished);
+  };
 
   /**
-   * AJAX Function to encrypt and save a message on the server.
+   * Function to encrypt and save a message on the server.
    *
    * @param {string} packageId The value used to specify the package to add a recipent to.
    * @param {string} keyCode The keycode used to encrypt the message with.
@@ -446,13 +552,27 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }
 
     myself.executor.run(function() {
-      myself.uploadHandler.addFiles(packageId, keyCode, serverSecret, files, uploadType, function(state, obj){
+      myself.uploadHandler.addFilesToDirectory(packageId, "", keyCode, serverSecret, files, uploadType, function(state, obj){
           },
           function(packageId, fileId, fileSize, fileName) {
             var event = {'fileId': fileId, 'packageId': packageId, 'keyCode': keyCode, 'fileSize': fileSize, 'fileName': fileName};
             myself.eventHandler.raise("sendsafely.files.uploaded", event);
             finished(packageId, fileId, fileSize, fileName);
           });
+    }, 'File Upload Failed');
+  };
+
+  this.encryptAndUploadFilesToDirectory = function(packageId, keyCode, serverSecret, files, uploadType, directoryId, finished) {
+
+    if(myself.uploadHandler === undefined) {
+      myself.uploadHandler = new EncryptAndUploadFile(myself.eventHandler, myself.request);
+      myself.uploadHandler.serverWorkerURI = myself.serverWorkerURI;
+    }
+
+    myself.executor.run(function() {
+      myself.uploadHandler.addFilesToDirectory(packageId, directoryId, keyCode, serverSecret, files, uploadType, function(state, data) {
+        myself.eventHandler.raise("sendsafely.status", {'state': state, 'data': data});
+      }, finished);
     }, 'File Upload Failed');
   };
 
@@ -464,6 +584,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
   this.generateKeyPair = function(description, visible, callback) {
+	
     var uploadFunction = function(privateKey, publicKey) {
       // Upload the public key.
       var handler = new AddPublicKey(myself.eventHandler, myself.request);
@@ -481,6 +602,25 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     });
   };
 
+    this.generateRsaKeyPair = function(description, callback) {
+
+        var uploadFunction = function(privateKey, publicKey) {
+            // Upload the public key.
+            var handler = new AddPublicKey(myself.eventHandler, myself.request);
+            handler.execute(publicKey, description, "", myself.async, function(publicKey) {
+                if(callback !== undefined) {
+                    callback(privateKey, publicKey);
+                }
+            });
+        };
+
+        myself.executor.run(function() {
+            var generateKeyPairFunction = new GenerateKeyPair(myself.eventHandler);
+            generateKeyPairFunction.serverWorkerURI = myself.keyGeneratorURI;
+            generateKeyPairFunction.execute(uploadFunction);
+        });
+    };
+
   this.removePublicKey = function(publicKeyId, callback)
   {
     var handler = new RemovePublicKey(myself.eventHandler, myself.request);
@@ -494,6 +634,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
     myself.executor.run(function() {
       myself.downloadHandler.addFile(packageId, fileId, keyCode, config);
+    });
+  };
+
+  this.downloadFileFromDirectory = function(packageId, directoryId, fileId, keyCode, config) {
+    if(myself.downloadHandler === undefined) {
+      myself.downloadHandler = new DownloadAndDecryptFile(myself.eventHandler, myself.request, myself.serverWorkerURI);
+    }
+
+    myself.executor.run(function() {
+      myself.downloadHandler.addFileFromDirectory(packageId, directoryId, fileId, keyCode, config);
     });
   };
 
@@ -531,7 +681,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
   /**
-   * AJAX Function that is used to create a package for the Server.
+   * Function that is used to create a package for the Server.
    *
    * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
    * @return {promise}
@@ -543,6 +693,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
     myself.executor.run(function() {
       new CreatePackage(myself.eventHandler, myself.request).execute(myself.async, finished);
+    }, 'Create Package Failed');
+  };
+
+  this.createWorkspace = function (finished) {
+
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    myself.executor.run(function() {
+      new CreatePackage(myself.eventHandler, myself.request).setVdr(true).execute(myself.async, finished);
     }, 'Create Package Failed');
   };
 
@@ -637,7 +797,7 @@ function SignedRequest(eventHandler, url, apiKey, apiKeySecret, requestAPI) {
 
   this.sendRequest = function (requestType, messageData, a_sync){
     var timestamp = myself.dateString();
-    var messageString = myself.apiKey + myself.apiPrefix + requestType.url + timestamp;
+    var messageString = myself.apiKey + myself.apiPrefix + requestType.url.split("?")[0] + timestamp
     if (messageData != "" && messageData != null)
       messageString += JSON.stringify(messageData);
     var signature = this.signMessage(messageString);
@@ -1414,6 +1574,7 @@ function ConvertRSAKey(eventHandler) {
   }
 
 }
+
 function CreateDirectory (eventHandler, request) {
   this.request = request;
   this.endpoint = { "url": "/package/{packageId}/directory/", "HTTPMethod" : "PUT", "mimetype": "application/json"};
@@ -1494,12 +1655,15 @@ function GetDownloadUrls(eventHandler, request) {
   this.execute = function (packageId, fileId, directoryId, checksum, startSegment, endSegment, async) {
     var endpoint = myself.request.extend({}, myself.endpoint);
 
+	if (directoryId) {
+		endpoint.url ='/package/{packageId}/directory/{directoryId}/file/{fileId}/download-urls/';
+		endpoint.url = endpoint.url.replace("{directoryId}", directoryId);
+     }
+	
     var postData = {};
-    postData['directoryId'] = directoryId;
     postData['checksum'] = checksum;
     postData['startSegment'] = startSegment;
-    postData['endSegment'] = endSegment;
-    
+    postData['endSegment'] = endSegment;	
     endpoint.url = endpoint.url.replace("{packageId}", packageId);
     endpoint.url = endpoint.url.replace("{fileId}", fileId);
     
@@ -1605,17 +1769,20 @@ function CreateGroup (eventHandler, request) {
 }
 function CreatePackage(eventHandler, request) {
   var myself = this;
-
+  var isVdr = false;
   this.CREATE_PACKAGE_FAILED = "create.package.failed";
   this.request = request;
   this.eventHandler = eventHandler;
   this.responseParser = new ResponseParser(eventHandler);
 
   this.endpoint = { "url": "/package/", "HTTPMethod" : "PUT", "mimetype": "application/json"};
-
+  this.setVdr = function(vdrParam){
+	isVdr = vdrParam;	
+	return this;
+  };
   this.execute = function (async, finished) {
 
-    var response = myself.request.sendRequest(myself.endpoint, {vdr: false}, async);
+    var response = myself.request.sendRequest(myself.endpoint, {vdr: isVdr}, async);
     myself.responseParser.processAjaxData(response, function(json) {
 
       function populateAndSendReturnData() {
@@ -1716,25 +1883,28 @@ function DecryptKeycode (eventHandler) {
       randomness = sjcl.codec.utf8String.fromBits(sjcl.random.randomWords(512,6));
     }
 
-    if(!eventListenerTracker.hasOwnProperty("DecryptKeycode")) {
-    	eventListenerTracker.DecryptKeycode = true;
-    	window.addEventListener('message', function(e)
-	    {
-	      var data = e.data;
-	      switch (data.cmd)
-	      {
-	        case 'keycode_decrypted':
-	          if(callback !== undefined) {
-	            callback(data.decryptedKeycode);
-	          }
-	          break;
-	        case 'randBuff':
-	          randomness = sjcl.codec.utf8String.fromBits(sjcl.random.randomWords(data.bytes,6));
-	          window.postMessage({'cmd': 'randBuff', 'randomness': randomness},'*');
-	          break;
-	      }
-	    }, false);
-    }
+	var messageListener = function (e) {
+	  var data = e.data;
+      switch (data.cmd)
+      {
+        case 'keycode_decrypted':
+          if(callback !== undefined) {
+            callback(data.decryptedKeycode);
+          }
+          break;
+        case 'randBuff':
+          randomness = sjcl.codec.utf8String.fromBits(sjcl.random.randomWords(data.bytes,6));
+          window.postMessage({'cmd': 'randBuff', 'randomness': randomness},'*');
+          break;
+      }		
+	}
+
+	if(eventListenerTracker.hasOwnProperty('DecryptKeycode')) {
+		window.removeEventListener('message', eventListenerTracker.DecryptKeycode, true);
+	}
+	
+	eventListenerTracker.DecryptKeycode = messageListener;
+	window.addEventListener('message', messageListener, true);
 
     window.postMessage({'cmd': 'decrypt_keycode', 'privateKey': privateKey, 'keyCode': keyCode, 'randomness': randomness, useBlinding: useBlinding},'*');
   }
@@ -1778,11 +1948,13 @@ function DecryptMessage (eventHandler) {
       }
     };
 
-    if(!eventListenerTracker.hasOwnProperty('DecryptMessage')) {
-    	eventListenerTracker.DecryptMessage = true;
-        window.addEventListener('message', callbackFunction, false);
+    if(eventListenerTracker.hasOwnProperty('DecryptMessage')) {
+    	window.removeEventListener('message', eventListenerTracker.DecryptMessage, true);
     }
-    
+	
+	eventListenerTracker.DecryptMessage = callbackFunction;
+    window.addEventListener('message', callbackFunction, true);
+ 
     window.postMessage(workerParameters,'*');
   }
 }
@@ -1820,8 +1992,8 @@ function DeleteDirectory (eventHandler, request) {
     endpoint.url = endpoint.url.replace("{directoryId}", directoryId);
 
     var response = myself.request.sendRequest(endpoint, null, async);
-    myself.responseParser.processAjaxData(response, function() {
-      finished();
+    myself.responseParser.processAjaxData(response, function(response) {
+      finished(response);
     }, myself.errorEvent);
   }
 }
@@ -1863,8 +2035,8 @@ function DeleteFileWithDirectory (eventHandler, request) {
 	    endpoint.url = endpoint.url.replace("{fileId}", fileId);
 
 	    var response = myself.request.sendRequest(endpoint, null, async);
-	    myself.responseParser.processAjaxData(response, function() {
-	      finished();
+	    myself.responseParser.processAjaxData(response, function(response) {
+	      finished(response);
 	    }, myself.errorEvent);
 	  }
 	}
@@ -1969,18 +2141,23 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   myself.eventHandler.bind(myself.PENDING_DOWNLOADS_CHANGED_EVENT, startDownloads);
   myself.eventHandler.bind(myself.PENDING_DECRYPTION_CHANGED_EVENT, startDecrypting);
   
-  if(!eventListenerTracker.hasOwnProperty('DownloadAndDecryptFile')) {
-	  eventListenerTracker.DownloadAndDecryptFile = true;
-	  window.addEventListener('message', function(event) {
-		  var data = event.data;
-		    switch (data.cmd)
-		    {
-		      case 'decrypted':
-		        partDecrypted(data.fileId, data.part, data.data);
-		        break;
-		    }
-	    }, false);
+
+  var messageListener = function(event) {
+	var data = event.data;
+    switch (data.cmd)
+    {
+      case 'decrypted':
+        partDecrypted(data.fileId, data.part, data.data);
+        break;
+    }
   }
+
+  if(eventListenerTracker.hasOwnProperty('DownloadAndDecryptFile')) {
+	window.removeEventListener('message', eventListenerTracker.DownloadAndDecryptFile, true);
+  }
+		
+  eventListenerTracker.DownloadAndDecryptFile = messageListener;		
+  window.addEventListener('message', messageListener, true);
 
   this.addFile = function(packageId, fileId, keyCode, config) {
 
@@ -2002,24 +2179,24 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     });
   };
 
-  this.addFileFromDirectory = function(packageId, directoryId, fileId, fileParts, fileSize, keyCode, config) {
+  this.addFileFromDirectory = function(packageId, directoryId, fileId, keyCode, config) {
 
-    var packageInfoHandler = new GetPackageInformation(myself.eventHandler, myself.request);
-    packageInfoHandler.execute(packageId, true, function(pkg) {
-      config = buildConfig(config);
+      myself.getFileFromDirectoryDetails(packageId, directoryId, fileId, function(pkg, file) {
+          config = buildConfig(config);
+          config.storage.fileParts = file.fileParts;
 
       var checksum = createChecksum(keyCode, pkg.packageCode);
-
-      if(fileParts == 0) {
-        myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':1, 'parts':fileParts, 'config': config, 'state': myself.states.WAITING});
+      if(file.fileParts == 0) {
+          config.fileParts = 1;
+          myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':1, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING});
       }
-      for(var i = 1; i<=fileParts; i++) {
-        myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':i, 'parts':fileParts, 'config': config, 'state': myself.states.WAITING});
+      for(var i = 1; i<=file.fileParts; i++) {
+        myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':i, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING});
       }
 
       myself.progressMap[fileId] = 0;
       myself.eventHandler.raise(myself.PENDING_DOWNLOADS_CHANGED_EVENT, {});
-    });
+	 });
   };
 
 
@@ -2037,9 +2214,18 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     });
   };
 
+    this.getFileFromDirectoryDetails = function(packageId, directoryId, fileId, callback) {
+        var packageInfoHandler = new GetPackageInformation(myself.eventHandler, myself.request);
+        packageInfoHandler.execute(packageId, true, function(pkg) {
+            var fileInfoHandler = new GetFileFromDirectory(myself.eventHandler, myself.request);
+            fileInfoHandler.execute(packageId, directoryId, fileId, true, function(file) {
+                callback(pkg,file);
+            });
+        });
+    };
 
   this.downloadFile = function (endpoint, requestBody, progressEvent, finishedEvent) {
-    var requestData = JSON.stringify(requestBody);
+	var requestData = JSON.stringify(requestBody);
     var downloadedBytes = 0;    
     var options = myself.request.getHTTPSOptionForFileDownload(endpoint, requestData, myself.ec2Proxy);
     var downloadedData = [];
@@ -2069,7 +2255,6 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
                 for (var i = 0; i < downloadedData.length; ++i) {
                 	formattedResponse[i] = downloadedData[i];
                 }
-
                 myself.eventHandler.raise(finishedEvent, formattedResponse);
         	} else {
         		// parse error from server
@@ -2115,13 +2300,12 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     return json;
   }
 
-  function startDownloads() {
+  function startDownloads() {    
     var ongoingDownloads = countCurrentDownloads();
     var pendingDecryptions = countCurrentDecryptions();
     if(myself.pendingDownloads.length > 0 && ongoingDownloads < myself.MAX_CONCURRENT_DOWNLOADS && pendingDecryptions <= myself.MAX_CONCURRENT_DECRYPTIONS) {
 
       var fileObj = getFirsWithState(myself.states.WAITING);
-
       if(fileObj !== undefined) {
         downloadFile(fileObj);
       }
@@ -2140,7 +2324,7 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   }
 
   function startDecrypting() {
-    var pendingDecryptions = countCurrentDecryptions();
+	var pendingDecryptions = countCurrentDecryptions();
     if(myself.pendingDownloads.length > 0 && pendingDecryptions <= myself.MAX_CONCURRENT_DECRYPTIONS) {
       var fileObj = getFirsWithState(myself.states.DOWNLOADED);
       if(fileObj !== undefined) {
@@ -2154,7 +2338,6 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     updateState(fileObj.fileId, fileObj.part, myself.states.DECRYPTING);
     //var worker = myself.workerPool.getWorker();
     var randomness = sjcl.codec.utf8String.fromBits(sjcl.random.randomWords(16,6));
-
     window.postMessage({'cmd': 'decrypt_file',
       'decryptionKey': generateDecryptionKey(fileObj.serverSecret, fileObj.keycode),
       'randomness': randomness,
@@ -2204,9 +2387,9 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     var endpoint = myself.downloadUrls[fileId + "-" + part];
     var requestBody = createRequestBody(fileObject);
 
-    if(endpoint === undefined) {
+	if(endpoint === undefined) {
       getDownloadLinks(fileObject.packageId, fileObject.directoryId, fileId, fileObject.checksum, part, part+25, function() {
-    	endpoint = myself.downloadUrls[fileId + "-" + part];
+		endpoint = myself.downloadUrls[fileId + "-" + part];
         myself.downloadFile(endpoint, requestBody, progressEvent, finishedEvent);
       })
     } else {
@@ -2215,12 +2398,12 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   }
 
   function getDownloadLinks(packageId, directoryId, fileId, checksum, startSegment,endSegment, callback) {
-    myself.responseParser.processAjaxDataRaw(myself.getDownloadUrls(packageId, fileId, directoryId, checksum, startSegment, endSegment, true), function (result) {
-    	if (result.response === 'SUCCESS') {
+    myself.responseParser.processAjaxDataRaw(myself.getDownloadUrls(packageId, fileId, directoryId, checksum, startSegment, endSegment, true), function (result) { 	
+		if (result.response === 'SUCCESS') {
             for(var i = 0; i<result.downloadUrls.length; i++) {
               var part = result.downloadUrls[i].part;
               var url = result.downloadUrls[i].url;
-              myself.downloadUrls[fileId + "-" + (i+1)] = url;
+              myself.downloadUrls[fileId + "-" + part] = url;
             }
             callback();
          }
@@ -2342,8 +2525,8 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
 
   function buildConfig(config) {
     config = (config === undefined) ? {} : config;
-    config.storage = (config.storage === undefined) ? new DefaultStorage(myself.eventHandler) : config.storage;
-    config.api = (config.api === undefined) ? myself.DOWNLOAD_API : config.api;
+	config.storage = (config.storage === undefined) ? new DefaultStorage(myself.eventHandler) : config.storage;
+	config.api = (config.api === undefined) ? myself.DOWNLOAD_API : config.api;
     return config;
   }
 
@@ -2398,7 +2581,6 @@ function EncryptAndUploadFile (eventHandler, request) {
   };
 
   this.addFilesToDirectory = function (packageId, directoryId, keyCode, serverSecret, files, uploadType, statusCb, finished) {
-    console.log("Using directoryId: " + directoryId);
     myself.getFileIDs(packageId, directoryId, keyCode, serverSecret, files, uploadType, statusCb, finished);
   };
 
@@ -2831,11 +3013,7 @@ function EncryptAndUploadFile (eventHandler, request) {
 	
     }
     
-  if (!eventListenerTracker.hasOwnProperty('EncryptAndUploadFile')) {
-	eventListenerTracker.EncryptAndUploadFile = true;
-
-    window.addEventListener('message', function(e)
-    {
+	var messageListener = function(e) {
       var data = e.data;
       switch (data.cmd)
       {
@@ -2877,11 +3055,15 @@ function EncryptAndUploadFile (eventHandler, request) {
 
           break;
       }
-    }, false);
-
-  }
-
-
+    
+	}
+	
+	if(eventListenerTracker.hasOwnProperty('EncryptAndUploadFile')) {
+		window.removeEventListener('message', eventListenerTracker.EncryptAndUploadFile, true);
+	}
+	
+	eventListenerTracker.EncryptAndUploadFile = messageListener;
+	window.addEventListener('message', messageListener , true);
   };
 
   this.sendProgress = function (event, fileId, percent) {
@@ -3085,7 +3267,7 @@ function EncryptAndUploadKeycodes(eventHandler, request) {
       switch (data.cmd)
       {
         case 'keycode_encrypted':
-          if(callback !== undefined) {
+          if(callback !== undefined) {	
             callback(publicKey.id, data.encryptedKeyCode);
           }
           break;
@@ -3369,7 +3551,6 @@ function GenerateKey2FA (eventHandler, request) {
   this.responseParser = new ResponseParser(eventHandler);
 
   var myself = this;
-
   this.execute = function (accessToken, smsCode, keyDescription, finished) {
     var endpoint = myself.request.extend({}, myself.endpoint);
     endpoint.url = endpoint.url.replace("{token}", accessToken);
@@ -3385,6 +3566,7 @@ function GenerateKey2FA (eventHandler, request) {
     }, myself.customErrorEvent);
   }
 }
+
 function GenerateKeyPair(eventHandler) {
 
   var myself = this;
@@ -3455,16 +3637,23 @@ function GenerateKeyPair(eventHandler) {
 }
 function GetDirectory (eventHandler, request) {
   this.request = request;
-  this.endpoint = { "url": "/package/{packageId}/directory/{directoryId}/", "HTTPMethod" : "GET", "mimetype": "application/json"};
+  this.endpoint = { "url": "/package/{packageId}/directory/{directoryId}", "HTTPMethod" : "GET", "mimetype": "application/json"};
   this.eventHandler = eventHandler;
   this.responseParser = new ResponseParser(eventHandler);
+  this.customError = "directory.information.failed";
 
   var myself = this;
 
-  this.execute = function (packageId, directoryId, async, finished) {
+  this.execute = function (packageId, directoryId, directoryIndex, fileIndex, sortField, sortOrder, async, finished) {
     var endpoint = myself.request.extend({}, myself.endpoint);
     endpoint.url = endpoint.url.replace("{packageId}", packageId);
     endpoint.url = endpoint.url.replace("{directoryId}", directoryId);
+    directoryIndex = (directoryIndex==undefined)?0:directoryIndex;
+    fileIndex = (fileIndex==undefined)?0:fileIndex;
+    sortField = (sortField==undefined || "") ? "name" : sortField;
+    sortOrder = (sortOrder==undefined || "") ? "asc" : sortOrder;
+    endpoint.url = endpoint.url+"?directoryIndex="+directoryIndex+"&fileIndex="+fileIndex+"&sortField="+sortField+"&sortOrder="+sortOrder;
+      
     var response = myself.request.sendRequest(endpoint, null, async);
     myself.responseParser.processAjaxData(response, function (res) {
       var data = {};
@@ -3579,9 +3768,14 @@ function GetPackageActivityLog (eventHandler, request) {
 
     var myself = this;
 
-    this.execute = function (packageId, postData, rowIndex, async, finished) {
+    this.execute = function (packageId, postData, userId, async, finished) {
         var endpoint = myself.request.extend({}, myself.endpoint);
         endpoint.url = endpoint.url.replace("{packageId}", packageId);
+        
+        if (userId) {
+        	endpoint.url = endpoint.url + "{userId}".replace("{userId}", userId);
+        }
+        
         var response = myself.request.sendRequest(endpoint, postData, async);
         myself.responseParser.processAjaxData(response, function (res) {
             var data = {};
@@ -3591,6 +3785,76 @@ function GetPackageActivityLog (eventHandler, request) {
     };
 
 }
+
+function GetSentPackages (eventHandler, request) {
+    this.request = request;
+    this.endpoint = { "url": "/package/", "HTTPMethod" : "GET", "mimetype": "application/json"};
+    this.eventHandler = eventHandler;
+    this.customErrorEvent = 'package.information.failed';
+    this.responseParser = new ResponseParser(eventHandler);
+    var myself = this;
+    this.execute = function (rowIndex, userId, async, finished) {
+        var endpoint = myself.request.extend({}, myself.endpoint);
+        if (userId && userId != "") {
+        	endpoint.url = endpoint.url + "sent/{userId}".replace("{userId}", userId);
+        }
+        rowIndex = (rowIndex==undefined)?0:rowIndex;
+        endpoint.url = endpoint.url+"?rowIndex="+rowIndex;
+        var response = myself.request.sendRequest(endpoint, null, async);
+        myself.responseParser.processAjaxData(response, function (res) {
+            var data = {};
+            data = res
+            finished(data);
+        }, myself.customErrorEvent);
+    };
+}
+
+function GetReceivedPackages (eventHandler, request) {
+    this.request = request;
+    this.endpoint = { "url": "/package/received/", "HTTPMethod" : "GET", "mimetype": "application/json"};
+    this.eventHandler = eventHandler;
+    this.customErrorEvent = 'package.information.failed';
+    this.responseParser = new ResponseParser(eventHandler);
+    var myself = this;
+    this.execute = function (rowIndex, userId, async, finished) {
+        var endpoint = myself.request.extend({}, myself.endpoint);
+        if (userId) {
+        	endpoint.url = endpoint.url + "{userId}".replace("{userId}", userId);
+        }
+        rowIndex = (rowIndex==undefined)?0:rowIndex;
+        endpoint.url = endpoint.url+"?rowIndex="+rowIndex;
+        var response = myself.request.sendRequest(endpoint, null, async);
+        myself.responseParser.processAjaxData(response, function (res) {
+            var data = {};
+            data = res
+            finished(data);
+        }, myself.customErrorEvent);
+    };
+}
+
+function GetArchivedPackages (eventHandler, request) {
+    this.request = request;
+    this.endpoint = { "url": "/package/archived/", "HTTPMethod" : "GET", "mimetype": "application/json"};
+    this.eventHandler = eventHandler;
+    this.customErrorEvent = 'package.information.failed';
+    this.responseParser = new ResponseParser(eventHandler);
+    var myself = this;
+    this.execute = function (rowIndex, userId, async, finished) {
+        var endpoint = myself.request.extend({}, myself.endpoint);
+        if (userId) {
+        	endpoint.url = endpoint.url + "{userId}".replace("{userId}", userId);
+        }
+	    rowIndex = (rowIndex==undefined)?0:rowIndex;
+        endpoint.url = endpoint.url+"?rowIndex="+rowIndex;
+        var response = myself.request.sendRequest(endpoint, null, async);
+        myself.responseParser.processAjaxData(response, function (res) {
+            var data = {};
+            data = res
+            finished(data);
+        }, myself.customErrorEvent);
+    };
+}
+
 function GetPackageInformation (eventHandler, request) {
   this.request = request;
   this.endpoint = { "url": "/package/{packageId}/", "HTTPMethod" : "GET", "mimetype": "application/json"};
@@ -3628,6 +3892,9 @@ function GetPackageInformation (eventHandler, request) {
   this.executeFromLink = function(link, async, finished) {
     var packageCode = getParameterByName(link, "packageCode");
     var keyCode = getFragmentParameterByName(link, "keyCode");
+	if(keyCode == ""){
+		keyCode = getFragmentParameterByName(link, "keycode");
+	}
     myself.execute(packageCode, async, function(data) {
       data.keyCode = keyCode;
       finished(data);
@@ -4134,6 +4401,36 @@ function UpdateFile (eventHandler, request) {
     }, myself.customError);
   }
 }
+
+function UpdateFileName (eventHandler, request) {
+    this.request = request;
+    this.endpoint = {
+        "url": "/package/{packageId}/file/{fileId}",
+        "HTTPMethod": "PATCH",
+        "mimetype": "application/json"
+    };
+    this.eventHandler = eventHandler;
+    this.customError = 'fileName.failed';
+    this.responseParser = new ResponseParser(eventHandler);
+
+    var myself = this;
+
+    this.execute = function (packageId, fileId , fileName, async, finished) {
+        var endpoint = myself.request.extend({}, myself.endpoint);
+        endpoint.url = endpoint.url.replace("{packageId}", packageId);
+        endpoint.url = endpoint.url.replace("{fileId}", fileId);
+
+        var postData = {};
+        postData['fileName'] = fileName;
+        var response = myself.request.sendRequest(endpoint, postData, async);
+        myself.responseParser.processAjaxData(response, function (res) {
+            //var data = {};
+            //data.message = res.message;
+            finished(res);
+        }, myself.customError);
+    }
+}
+
 function UpdatePackage (eventHandler, request) {
   this.request = request;
   this.endpoint = { "url": "/package/{packageId}/", "HTTPMethod" : "POST", "mimetype": "application/json"};
