@@ -14,9 +14,17 @@ eval(fs.readFileSync(__dirname + '/uploadWorker.js').toString());
 eval(fs.readFileSync(__dirname + '/keyGeneratorWorker.js').toString());
 var eventListenerTracker = {};
 
-/** @namespace */
+/**
+ * @description The only constructor for the library.
+ * @param {String} url The SendSafely host/url that the API will connect to.
+ * @param {String} apiKey The API Key that will be used to authenticate to SendSafely.
+ * @param {String} apiSecret The API Secret that will be used to authenticate to SendSafely.
+ * @returns {constructor}
+ */
 function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
-
+	/**
+	 * @namespace SendSafely
+	 */
   var myself = this;
 
   this.async = true;
@@ -60,12 +68,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
 	//Main API functions
 	//Functions
-  /**
-   * Function to verify the version of the application against the server.
-   * @param {string} An identifier describing the API. If none is supplied, the default API one will be used.
-   * @param {function} Callback which will be called when the operation is done. function(version)
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   */
+	/**
+	 * Function to verify the version of the application against the server.
+	 * @ignore
+	 * @param {string} api_identifier An identifier describing the API. If none is supplied, the default API one will be used.
+	 * @param {function} finished The callback that handles the response.
+	 * @throws {SendSafely#error} Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message.
+	 */
   this.verifyVersion = function (api_identifier, finished) {
 
     try { this.checkAPIInitialized();}
@@ -77,10 +86,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
   /**
-   * Function to parse out SendSafely links from a String of text
-   * @param {string} A string of text to be parsed.
-   * @return {Array.<string>} A list of SendSafely links.
-   */
+	 * A helper function to parse out links from a String of text. Returns a list of links found in the provided text.
+	 * @param {String} text The text to be parsed.
+	 * @returns {List}
+	 */
   this.parseLinks = function(text) {
     try {
       return new ParseSendSafelyLinks().execute(text);
@@ -96,10 +105,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * Function that is used to validate the APIKeys to the server.
-   *
-	 * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+	 * Verifies the API Key and API Secret with the server. Returns the email address of the user that owns the API key.
+	 * @param {function} finished function (user)
+     * @fires {sendsafely#error}
+	 * @returns {promise}
 	 */
 	this.verifyCredentials = function(finished) {
 
@@ -109,13 +118,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new VerifyCredentials(myself.eventHandler, myself.request).execute(myself.async, finished);
 	};
 
-  /**
-   * Function to fetch information about the authenticated user.
-   * @param {function} failure callback Function is called if a failure happens.
-   * @param {function} success_callback Function is called when data is receved from the server with no errors.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * Returns profile information related to the authenticated API user.
+	 * @param {function} finished function (user)
+	 * @param {function} customErrorEvent Optional custom error event (to replace user.information.failed).
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.getUserInformation = function (finished, customErrorEvent) {
 
     try { this.checkAPIInitialized();}
@@ -128,11 +137,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * Function that is used to remove a file from a package.
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-	 * @param {string} fileId The value used to specify the file to be removed from the package.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+	 * Deletes a file from a package. 
+	 * @param {String} packageId The unique package id of the package for the delete file operation.
+	 * @param {String} fileId The unique file id of the file to delete.
+	 * @param {function} finished Optional callback function.
+	 * @fires {sendsafely#error}
+	 * @returns {void}
 	 */
 	this.deleteFile = function (packageId, fileId, finished) {
 
@@ -162,13 +172,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
         }, 'Deleting file failed');
     };
 
-    /**
-	 * Function that is used to remove a recipient from a package.
-	 * @param {string} packageId The value used to specify the package to perform the operation.
-	 * @param {string} recipientId The value is used to specify the recipient identifier associated with the recipient to remove.
-     * @param {function} finished callback to execute after the operation has completed.
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+	/**
+	 * Removes a recipient from a given package.
+	 * @param {String} packageId The unique package id of the package for the remove recipient operation.
+	 * @param {String} recipientId The unique recipient id of the recipient to remove from the package.
+	 * @param {function} finished optional callback function.
+	 * @fires {sendsafely#error}
+	 * @returns {void}
 	 */
 	this.removeRecipient = function (packageId, recipientId, finished) {
 
@@ -179,10 +189,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
 	/**
-	 * Function that is used to get Information about the enterprise you and connected to.
-	 *
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+	 * Retrieves organization-level information about the SendSafely enterprise account that the currently authenticated user belongs to. 
+	 * @param {function} finished function(host, systemName, allowUndisclosedRecipients, headerColor, linkColor, messageEncryption)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
 	 */
 	this.enterpriseInfo = function (finished) {
 
@@ -193,13 +203,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
 	/**
-	 * Function that is used to add an email to a package represented by the packageId.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-	 * @param {object} data The data that will be transferd to the server
-	 * @param {string} data.email the Email of the recipient.
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+	 * Adds a recipient to a given package.
+	 * @param {String} packageId The unique packageId that you are adding the recipient to.
+	 * @param {String} email The recipient email to be added.
+	 * @param {String} keyCode keyCode value of the package adding the recipient to.
+	 * @param {function} finished function (<a href="#Recipient">Recipient</a>)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
 	 */
 	this.addRecipient = function (packageId, email, keyCode, finished) {
 
@@ -219,14 +229,17 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   	  }, 'Failed to add recipient');
 	};
 
-  /**
-   * Function that is used to adds a list of emails to a package represented by the packageId.
-   *
-   * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @param {Array.<string>} a list of emails to be added.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * Adds a list of recipients to a given package.
+	 * @property notes A recipient object list describing the newly added recipients.
+	 * @param {String} packageId The unique package id of the package for the add recipient operation.
+	 * @param {String} emails The recipient email to be added.
+	 * @param {String} keyCode keyCode value of the package adding the recipient to.
+	 * @param {function} finished function (<a href="#Recipient">Recipient</a>)
+	 * @param {function} customErrorEvent Optional custom error event (to replace recipients.add.failed).
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.addRecipients = function (packageId, emails, keycode, finished, customEvent) {
 
     try { this.checkAPIInitialized();}
@@ -242,15 +255,14 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * Function that is used to add an phonenumber to an emailaddress to the package represented by the packageId.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-	 * @param {string} recipientId The value is uded to specify the recipiant the phone number will be attributes to.
-	 * @param {string} phonenumber The phone number to be associated with the recipient.
-	 * @param {string} countryCode The countrycode of the phonenumber
-     * @param {function} failureCb callback Function is called if a failure happens.
-     * @param {function} finished Function is called when data is receved from the server with no errors.
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+	 * Adds a phone number to a recipient for SMS verification .
+	 * @param {String} packageId The unique packageId that you are updating.
+	 * @param {String} recipientId The recipientId to which the phone number will be added.
+	 * @param {String} phonenumber A phone number to be used for SMS verification.
+	 * @param {String} countryCode A country code associated with the phone number.
+	 * @param {function} finished function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
 	 */
 	this.addRecipientPhonenumber = function (packageId, recipientId, phonenumber, countryCode, finished) {
 
@@ -272,11 +284,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
 	/**
-	 * Function that to set the package as finalized.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipient to.
-     * @event {sendsafely.error} Raised if any error occurred
-	 * @return {promise}
+	 * Finalizes the package so it can be delivered to the recipients. Returns the Secure Link needed for recipients to access the package. 
+	 * @param {String} packageId The unique packageId that is being finalized.
+	 * @param {String} packageCode The package code used to create the secure link.
+	 * @param {String} keycode The keycode used to encrypt the message and files.
+	 * @param {function} finished function(url)
+	 * @fires {sendsafely#error}
+	 * @returns {String}
 	 */
 	this.finalizePackage = function (packageId, packageCode, keyCode, finished) {
 
@@ -308,6 +322,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }, 'Failed to finalize package');
 	};
 
+  /**
+	 * Finalizes a package without any recipients being specified. Returns the Secure Link needed for recipients to access the package. 
+	 * @param {String} packageId The unique packageId that is being finalized.
+	 * @param {String} packageCode The package code used to create the secure link.
+	 * @param {String} keycode The keycode used to encrypt the message and files.
+	 * @param {String} password A password that will be required in order to access the package. Leave as undefined if no password should be required.
+	 * @param {function} finished function (url)
+	 * @fires {sendsafely#error}
+	 * @returns {String}
+	 */
   this.finalizeUndisclosedPackage = function (packageId, packageCode, keyCode, password, finished) {
 
     try { this.checkAPIInitialized();}
@@ -324,14 +348,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
         return notifyRecipients;
   };
     
-  /**
-   * Function that to save the message on the server.
-   *
-   * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @param {string} message The message to send.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * @ignore
+	 * Syncs a message with the server.
+	 * @param {String} packageId The unique packageId that you are adding the message to.
+	 * @param {String} message The message to be uploaded.
+	 * @param {function} finished function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.saveMessage = function (packageId, message, finished) {
 
     try { this.checkAPIInitialized();}
@@ -346,12 +371,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     handler.execute(packageId, message, myself.async, finished);
   };
 
-	/**
-	 * Function that deletes a package that has not been finalized.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
+  /**
+	 * @ignore
+	 * Deletes a temporary package.
+	 * @param {String} packageId The packageId to be deleted.
+	 * @param {function} finished function ()
+	 * @fires {sendsafely#error}
 	 */
 	this.deleteTempPackage = function (packageId, finished) {
 
@@ -362,11 +387,10 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	};
 
   /**
-   * Function that deletes a package.
-   *
-   * @param {string} packageId to be deleted
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
+   * Permanently deletes a package.
+   * @param {string} The packageId to be deleted.
+   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message.
+   * @returns {void}
    */
   this.deletePackage = function (packageId, finished) {
 
@@ -405,13 +429,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
       new DeleteDirectory(myself.eventHandler, myself.request).execute(packageId, directoryId, myself.async, finished);
     }, 'Deleting Directory failed');
   };
-	/**
-	 * Function queries information about the specified package.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
-	 */	
+
+  /**
+	 * Fetch the latest metadata for a specific package using a PackageId.
+	 * @param {String} packageId The packageId of the package.
+	 * @param {function} finished function (<a href="#PackageInformation">PackageInformation</a>)
+	 * @fires {sendsafely#error}
+	 * @fires {package.information#failed}
+	 * @returns {void}
+	 */
 	this.packageInformation = function (packageId, finished) {
 
     try { this.checkAPIInitialized();}
@@ -420,13 +446,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new GetPackageInformation(myself.eventHandler, myself.request).execute(packageId, myself.async, finished);
 	};
 
-  /**
-   * Function queries information about the specified package.
-   *
-   * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * Fetch the latest metadata for a specific package using a Secure Link.
+	 * @param {String} link The Secure Link for the package.
+	 * @param {function} finished function (<a href="#PackageInformation">PackageInformation</a>)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.packageInformationFromLink = function (link, finished) {
 
     try { this.checkAPIInitialized();}
@@ -482,16 +508,14 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new UpdateRole(myself.eventHandler, myself.request).execute(packageId, recipientId, roleName, myself.async, finished);
   };
 
-
 	/**
-	 * Function queries information about the specified package.
-	 * 
-	 * @param {string} packageId The value used to specify the package to add a recipent to.
-	 * @param {object} data
-	 * @param {int} data.life
-     * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-	 * @return {promise}
-	 */		
+	 * Update the package expiration (days). Setting the life to 0 means the package will not expire.  
+	 * @param {String} packageId The packageId to update.
+	 * @param {int} data Json object containing a life parameter (integer). For example, {life:15}. int value must be a valid number between 0 and 365.
+	 * @param {function} finished function (<a href="#PackageInformation">PackageInformation</a>)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
 	this.updatePackage = function (packageId, data, finished){
 
     try { this.checkAPIInitialized();}
@@ -506,17 +530,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new UpdateFileName(myself.eventHandler, myself.request).execute(packageId, fileId, fileName, myself.async, finished);
   };
 
-  /**
-   * Function to encrypt and save a message on the server.
-   *
-   * @param {string} packageId The value used to specify the package to add a recipent to.
-   * @param {string} keyCode The keycode used to encrypt the message with.
-   * @param {string} serverSecret The server secret used to encrypt the message with.
-   * @param {string} message The message to encrypt and upload.
-   * @param {function} finished Callback function that called when file has finished uploading
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * Adds a secure message to the package. If a message already exists it will be overwritten. 
+	 * @param packageId {String} The packageId that you are adding the message to.
+	 * @param keyCode {String} The keycode for the package.
+	 * @param serverSecret {String} The server secret associated with the package.
+	 * @param message {String} The message to be encrypted (text).
+	 * @param finished {function} function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.encryptAndUploadMessage = function (packageId, keyCode, serverSecret, message, finished) {
 
     try { this.checkAPIInitialized();}
@@ -527,16 +550,19 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     });
   };
 
-  /**
-   * Specify the files to be uploaded to the package
-   *
-   * @param {Array<blob>} files an array of the files that are being requested to upload
-   * @param {string} uploadType Upload string for analytic purposes
-   * @param {function} finished Callback function that called when file has finished uploading
-   * @event {sendsafely.progress} Receive progress about current uploads
-   * @event {sendsafely.status.changed} Raised when the status changes for a file. This could mean it's been attached, encrypted etc.
-   * @event {sendsafely.error} Event to subscribe to errors that could happen during the upload
-   */
+	/**
+	 * Adds a list of files to the package. Files will be encrypted and uploaded to the server and stored in the root directory of the package. 
+	 * @param {String} packageId The packageId that you are adding the file to.
+	 * @param {String} keyCode The key code associated with the package.
+	 * @param {String} serverSecret The server secret associated with the package.
+	 * @param {List<file>} files  An array of files that are being uploaded.
+	 * @param {String} uploadType Optional Leave blank (or specify 'JS_API').
+	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
+	 * @fires {sendsafely#progress}
+	 * @fires {file.upload#error}
+	 * @fires {sendsafely.files#attached}
+	 * @returns {void}
+	 */
   this.encryptAndUploadFiles = function(packageId, keyCode, serverSecret, files, uploadType, finished) {
 
     if(myself.uploadHandler === undefined) {
@@ -562,6 +588,20 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }, 'File Upload Failed');
   };
 
+	/**
+	 * Adds a list of files to the package within a specific directory . Files will be encrypted and uploaded to the server. 
+	 * @param {String} packageId The packageId that you are adding the file to.
+	 * @param {String} keyCode The key code associated with the package.
+	 * @param {String} serverSecret The server secret associated with the package.
+	 * @param {List<file>} files  An array of files that are being uploaded.
+	 * @param {String} uploadType Optional Leave blank (or specify 'JS_API').
+	 * @param {String} directoryId The directoryId of the directory that you want to add the files to.
+	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
+	 * @fires {sendsafely#progress}
+	 * @fires {file.upload#error}
+	 * @fires {sendsafely.files#attached}
+	 * @returns {void}
+	 */
   this.encryptAndUploadFilesToDirectory = function(packageId, keyCode, serverSecret, files, uploadType, directoryId, finished) {
 
     if(myself.uploadHandler === undefined) {
@@ -576,6 +616,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }, 'File Upload Failed');
   };
 
+  /**
+	 * Downloads and decrypts a keycode from the server for the given a packageId and Trusted Device key pair.
+	 * @param privateKey {String} The private key portion of the Trusted Device key pair.
+	 * @param publicKeyId {String} The public key id associated with the Trusted Device key pair.
+	 * @param packageId {String} The package id you would like to obtain the keycode for.
+	 * @param callback {function} function (keycode)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.getKeycode = function(privateKey, publicKeyId, packageId, callback)
   {
     var handler = new GetKeycode(myself.eventHandler, myself.request);
@@ -583,6 +632,15 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     handler.execute(privateKey, publicKeyId, packageId, myself.async, callback);
   };
 
+  /**
+	 * @ignore
+	 * Generates a new Trusted Device key pair. The private key and public key returned. The public key is uploaded and stored on the SendSafely servers. The public key returned also includes an "id" parameter that used to uniquely identify the Trusted Device key. 
+	 * @param description {String} Field used to describe or name the key pair (ie My Node Script Key).
+	 * @param visible {String} (deprecated) visibility setting of the keypair (deprecated).
+	 * @param callback {function} function (privateKey, publicKey).
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.generateKeyPair = function(description, visible, callback) {
 	
     var uploadFunction = function(privateKey, publicKey) {
@@ -602,6 +660,13 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     });
   };
 
+  /**
+	 * Generates a new Trusted Device key pair. The private key and public key returned. The public key is uploaded and stored on the SendSafely servers. The public key returned also includes an "id" parameter that used to uniquely identify the Trusted Device key. 
+	 * @param description {String} Field used to describe or name the key pair (ie My Node Script Key).
+	 * @param callback {function} function (privateKey, publicKey).
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
     this.generateRsaKeyPair = function(description, callback) {
 
         var uploadFunction = function(privateKey, publicKey) {
@@ -621,12 +686,32 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
         });
     };
 
+  /**
+	 * Revokes a Trusted Device key pair. Only call this function if the private key has been deleted and should never be used anymore (cannot be undone). 
+	 * @param publicKeyId {String} The public key id to revoke.
+	 * @param callback {function}
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.removePublicKey = function(publicKeyId, callback)
   {
     var handler = new RemovePublicKey(myself.eventHandler, myself.request);
     handler.execute(publicKeyId, myself.async, callback);
   };
 
+  /**
+	 * Downloads and decrypts an individual file from the root directory of a package.
+	 * @param packageId {String} The packageId of the package containing the file.
+	 * @param fileId {String} The fileId of the file to be downloaded. 
+	 * @param keyCode {String} The keycode associated with the package.
+     * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
+   * @fires {sendsafely#error}
+	 * @fires {download#progress}
+	 * @fires {file#decrypted}
+	 * @fires {save#file}
+     * @fires {file#saved}
+	 * @returns {void}
+	 */
   this.downloadFile = function(packageId, fileId, keyCode, config) {
     if(myself.downloadHandler === undefined) {
       myself.downloadHandler = new DownloadAndDecryptFile(myself.eventHandler, myself.request, myself.serverWorkerURI);
@@ -637,6 +722,19 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     });
   };
 
+  /**
+	 * Downloads and decrypts an individual file from a specific directory of the package.
+	 * @param packageId {String} The packageId of the package containing the file.
+	 * @param fileId {String} The fileId of the file to be downloaded. 
+	 * @param keyCode {String} The keycode associated with the package.
+     * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
+	 * @fires {sendsafely#error}
+	 * @fires {download#progress}
+	 * @fires {file#decrypted}
+	 * @fires {save#file}
+     * @fires {file#saved}
+	 * @returns {void}
+	 */
   this.downloadFileFromDirectory = function(packageId, directoryId, fileId, keyCode, config) {
     if(myself.downloadHandler === undefined) {
       myself.downloadHandler = new DownloadAndDecryptFile(myself.eventHandler, myself.request, myself.serverWorkerURI);
@@ -647,6 +745,14 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     });
   };
 
+  /**
+	 * Creates a new directory in the root folder of a Workspace. Only Workspace packages support this function.
+	 * @param packageId {String} The package id of the package.
+	 * @param directoryName {String} The name of the directory to be added to the workspace.
+	 * @param finished {function} function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.createDirectory = function (packageId, directoryName, finished) {
     try { this.checkAPIInitialized();}
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
@@ -654,23 +760,55 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     new CreateDirectory(myself.eventHandler, myself.request).execute(packageId, directoryName, myself.async, finished);
   };
 
+  /**
+	 * Creates a new sub-directory in a Workspace. Only Workspace packages support this function.
+	 * @param packageId {String} The package id of the package.
+	 * @param directoryName {String} The name of the directory to be added to the workspace.
+	 * @param directoryId {String} The directory id of parent directory in which to create this sub-directory. If creating a directory in the root directory of a Workspace, this will be the packageDirectoryId property of the Workspace Package. 
+	 * @param finished {function} function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.createSubdirectory = function (packageId, directoryName, directoryId, finished) {
     try { this.checkAPIInitialized();}
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
     new CreateSubdirectory(myself.eventHandler, myself.request).execute(packageId, directoryName, directoryId, myself.async, finished);
   };
 
+  /**
+	 * Moves a directory from its current location to the specified destination directory in a Workspace package.
+	 * @param packageId {String} The package id of the package.
+	 * @param sourceDirectoryId {String} The directory id of the directory to move. The source directory and the target directory must belong to the same package. 
+	 * @param targetDirectoryId {String} The directory id of the destination directory. The source directory and the target directory must belong to the same package. 
+	 * @param finished {function} function ()
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.updateDirectory = function (packageId, sourceDirectoryId, targetDirectoryId, finished) {
     try { this.checkAPIInitialized();}
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
     new UpdateDirectory(myself.eventHandler, myself.request).execute(packageId, sourceDirectoryId, targetDirectoryId,myself.async, finished);
   };
 
+  this.copyFile = function(sourcePackageId, sourceFileId, sourceServerSecret, sourceKeycode, targetPackageId, targetDirectoryId, targetServerSecret, targetKeycode, finished){
+    try { this.checkAPIInitialized();}
+    catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
+
+    var messageEncryptor = new EncryptMessage(myself.eventHandler);
+    messageEncryptor.serverWorkerURI = myself.serverWorkerURI;
+    var fileKey = sourceServerSecret + sourceKeycode;
+    messageEncryptor.execute(fileKey, sourcePackageId, targetKeycode, targetServerSecret, function(encryptedMessage){
+      var fileKey = encryptedMessage;
+      new CopyFile(myself.eventHandler, myself.request).execute(sourcePackageId, sourceFileId, fileKey, targetPackageId, targetDirectoryId, targetServerSecret, targetKeycode, myself.async, finished);
+    });
+
+  };
+
   /**
-   * Specify the files to be uploaded to the package
-   *
-   * @return {bool} Returns true if any files are currently being encrypted or uploaded. False otherwise
-   */
+	 * Utility function to check if the package has any ongoing uploads.
+	 * @property notes Returns a boolean flag to determine if the package has any ongoing uploads.
+	 * @returns {boolean}
+	 */
   this.hasOngoingUploads = function() {
 
     if(myself.uploadHandler === undefined) {
@@ -680,12 +818,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     return myself.uploadHandler.encrypting > 0 || myself.uploadHandler.uploading > 0;
   };
 
-  /**
-   * Function that is used to create a package for the Server.
-   *
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   * @return {promise}
-   */
+	/**
+	 * Create a new empty package. 
+	 * @param finished {function} function (packageId, serverSecret, packageCode, keyCode)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.createPackage = function (finished) {
 
     try { this.checkAPIInitialized();}
@@ -696,6 +834,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }, 'Create Package Failed');
   };
 
+	/**
+	 * Create a new empty Workspace package. 
+	 * @param finished {function} function (packageId, serverSecret, packageCode, keyCode)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.createWorkspace = function (finished) {
 
     try { this.checkAPIInitialized();}
@@ -706,14 +850,18 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }, 'Create Package Failed');
   };
 
-  /**
-   * Encrypt a new message
-   *
-   * @param {string} The message to be encrypted
-   * @param {function} failureCb Callback function that called if an error has occured
-   * @param {function} finished Callback function that called when file has finished uploading
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   */
+	/**
+	 * @ignore
+	 * Encrypt a new message. This function will only encrypt the message, not upload it to the server.
+	 *
+	 * @param packageId {String} The unique packageId that you are adding the message to
+	 * @param keyCode {String} The keycode used to encrypt the message with
+	 * @param serverSecret {String} The server secret used to encrypt the message with
+	 * @param message {String} The message to be encrypted.
+	 * @param finished {function} function (encryptedMessage)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.encryptMessage = function(packageId, keyCode, serverSecret, message, finished) {
     try { this.checkAPIInitialized();}
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
@@ -724,14 +872,16 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
   };
 
-  /**
-   * Decrypts message
-   *
-   * @param {string} The message to be decrypted
-   * @param {function} failureCb Callback function that called if an error has occured
-   * @param {function} finished Callback function that called when file has finished uploading
-   * @event sendsafely.error function(code, message) Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
-   */
+	/**
+	 * Decrypt the message from a package.
+	 * @param packageId {String} The packageId that contains the message to be decrypted.
+	 * @param keyCode {String} The keycode associated with the package.
+	 * @param serverSecret {String} The server secret associated with the package.
+	 * @param ciphertext {String} The ciphertext message to decrypt.
+	 * @param finished {function} function(decryptedMessage)
+	 * @fires {sendsafely#error}
+	 * @returns {void}
+	 */
   this.decryptMessage = function(packageId, keyCode, serverSecret, ciphertext, finished) {
     try { this.checkAPIInitialized();}
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
@@ -744,6 +894,9 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   /*
    * INTERNAL FUNCTIONS BELOW THIS POINT
    */
+  /**
+	 * @ignore
+	 */
   this.checkAPIInitialized = function() {
     if(typeof sjcl === "undefined"){
       throw "SJCL is not defined";
@@ -753,6 +906,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     }
   };
 
+  /**
+	 * @ignore
+	 * @param privateKey
+	 * @param publicKeyId
+	 * @param callback
+	 */
   this.syncKeycodes = function(privateKey, publicKeyId, callback)
   {
     var handler = new SyncKeycodes(myself.eventHandler, myself.request);
@@ -760,6 +919,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     handler.execute(privateKey, publicKeyId, myself.async, callback);
   };
 
+  /**
+	 * @ignore
+	 * @param log
+	 * @param stacktrace
+	 * @param systemInfo
+	 */
   this.sendFeedback = function(log, stacktrace, systemInfo) {
     new FeedbackHandler(myself.eventHandler, myself.request).execute(log, stacktrace, systemInfo, myself.async);
   };
@@ -917,11 +1082,11 @@ function SignedRequest(eventHandler, url, apiKey, apiKeySecret, requestAPI) {
     return options;
   }
 
-  /**
-   * Generates a ISO Timestamp to the nearest second
-   *
-   * @returns {string} ISO timestamp
-   */
+	/**
+	 * Generates a ISO Timestamp to the nearest second
+	 * @ignore
+	 * @returns {string} ISO timestamp
+	 */
   this.dateString = function() {
     var time = new Date().toISOString();
     return time.substr(0, 19) + "+0000"; //2014-01-14T22:24:00+0000
@@ -934,15 +1099,15 @@ function SignedRequest(eventHandler, url, apiKey, apiKeySecret, requestAPI) {
 
   };
 
-  /**
-   * Function used to deal with Errors, and callbacks for AJAX Requests.
-   * Progress callback cannot be done when async is false.
-   *
-   * @param {promise} ajax AJAX Promise
-   * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
-   * @param {function} success_callback Function is called when data is receved from the server with no errors.
-   * @param {function} progress_callback Function is called when the data is being uploaded.
-   */
+ 	/**
+	 * Function used to deal with Errors, and callbacks for AJAX Requests.
+	 * Progress callback cannot be done when async is false.
+	 * @ignore
+	 * @param {promise} ajax AJAX Promise
+	 * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
+	 * @param {function} success_callback Function is called when data is receved from the server with no errors.
+	 * @param {function} progress_callback Function is called when the data is being uploaded.
+	 */
   this.processAjaxData = function(ajax, success_callback) {
     ajax.fail(function (xhr, status, error) {
       // Wrap the error to a format we recognize.
@@ -979,6 +1144,13 @@ function EventHandler(parent) {
 
   this.eventlist = {};
   this.ERROR_EVENT = 'sendsafely.error';
+  /**
+	 * Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+	 * @event sendsafely#error
+	 * @type function
+	 * @param code
+	 * @param message
+	 */
 
   // Inject into the parent
   if(parent !== undefined) {
@@ -1091,15 +1263,15 @@ function ResponseParser(eventHandler) {
 
   var myself = this;
 
-  /**
-   * Function used to deal with Errors, and callbacks for AJAX Requests.
-   * Progress callback cannot be done when async is false.
-   *
-   * @param {promise} ajax AJAX Promise
-   * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
-   * @param {function} success_callback Function is called when data is receved from the server with no errors.
-   * @param {function} progress_callback Function is called when the data is being uploaded.
-   */
+	/**
+	 * Function used to deal with Errors, and callbacks for AJAX Requests.
+	 * Progress callback cannot be done when async is false.
+	 * @ignore
+	 * @param {promise} ajax AJAX Promise
+	 * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
+	 * @param {function} success_callback Function is called when data is receved from the server with no errors.
+	 * @param {function} progress_callback Function is called when the data is being uploaded.
+	 */
   this.processAjaxData = function(ajax, success_callback, errorEvent) {
     ajax.fail(function (xhr, status, error) {
       // Wrap the error to a format we recognize.
@@ -1123,17 +1295,19 @@ function ResponseParser(eventHandler) {
         })
   };
 
-  /**
-   * Function used to deal with Errors, and callbacks for AJAX Requests.
-   * Progress callback cannot be done when async is false.
-   *
-   * @param {promise} ajax AJAX Promise
-   * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
-   * @param {function} success_callback Function is called when data is receved from the server with no errors.
-   * @param {function} progress_callback Function is called when the data is being uploaded.
-   */
+	/**
+	 * Function used to deal with Errors, and callbacks for AJAX Requests.
+	 * Progress callback cannot be done when async is false.
+	 *
+	 * @param {promise} ajax AJAX Promise
+	 * @param {function} error_callback Function is called when there is an error with the function or when there is an error in the responce.
+	 * @param {function} success_callback Function is called when data is receved from the server with no errors.
+	 * @param {function} progress_callback Function is called when the data is being uploaded.
+	 */
 
-
+	/**
+	 * @ignore
+	 */
   this.processAjaxDataRaw = function(ajax, callback, errorEvent) {
       ajax.fail(function (xhr, status, error) {
           var errorMessage;
@@ -1164,6 +1338,13 @@ function DefaultStorage(eventHandler, fileId, fileParts)
 {
   var myself = this;
   this.SAVE_FILE_EVENT = "save.file";
+  /**
+   * The raw decrypted file. Use this event to save the file to the actual file system
+   * @event save#file
+   * @type {function}
+   * @param {String} fileId
+   * @param {Blob} file
+  */
   this.eventHandler = eventHandler;
   this.file = undefined;
   this.fileFormat = 'ARRAY_BUFFER';
@@ -1198,6 +1379,50 @@ function DefaultStorage(eventHandler, fileId, fileParts)
   };
 
 }
+
+function WriteStreamStorage(eventHandler, fileWriteStream, config)
+{
+  var myself = this;
+  this.FILE_SAVED_EVENT = "file.saved";
+  /**
+   * The raw decrypted file stream for large file downloads. Use this event to save the file to the actual file system using a write stream
+   * @event file#saved
+   * @type {function}
+   * @param {String} fileId
+   * @param {Json} config
+   */
+  this.eventHandler = eventHandler;
+  this.fileWriteStream = fileWriteStream;
+  this.config = config;
+  this.file = undefined;
+  this.fileFormat = 'ARRAY_BUFFER';
+  this.fileParts = 0; //This is total file parts in the file
+  this.partCounter = 0; //This is the total parts we've been sent by the parent process
+
+  this.getFileFormat = function() {
+    return myself.fileFormat;
+  };
+  
+  this.store = function(fileId, part, data, callback)
+  {	  
+    myself.fileWriteStream.write(data);
+
+    myself.partCounter++;
+    
+    if (myself.partCounter == myself.fileParts)
+    {
+      //were done
+      callback({done:true});
+    }
+  };
+
+  this.save = function(fileId)
+  {
+	  myself.fileWriteStream.end();
+	  myself.eventHandler.raise(myself.FILE_SAVED_EVENT, {fileId: fileId, config: myself.config});
+  };
+}
+
 function WorkerPool(serverWorkerURI, eventListener)
 {
   var myself = this;
@@ -1725,6 +1950,32 @@ function MarkFileComplete(eventHandler, request) {
   }
 }
 
+function CopyFile(eventHandler, request) {
+  this.request = request;
+  this.endpoint = { "url": "/package/{packageId}/file/{fileId}/copy", "HTTPMethod" : "POST", "mimetype": "application/json"};
+  this.eventHandler = eventHandler;
+  this.responseParser = new ResponseParser(eventHandler);
+  this.customError = 'copy.file.failed';
+
+  var myself = this;
+  this.execute = function (sourcePackageId, sourceFileId, fileKey, targetPackageId, targetDirectoryId, targetServerSecret, targetKeycode, async, finished) {
+    var endpoint = myself.request.extend({}, myself.endpoint);
+    var postData = {};
+    postData['targetPackageId'] = targetPackageId;
+    postData['targetDirectoryId'] = targetDirectoryId;
+    postData['fileKey'] = fileKey;
+
+    endpoint.url = endpoint.url.replace("{packageId}", sourcePackageId);
+    endpoint.url = endpoint.url.replace("{fileId}", sourceFileId);
+
+    var response = myself.request.sendRequest(endpoint, postData, async);
+    myself.responseParser.processAjaxData(response, function (res) {
+      finished(response);
+    }, myself.customError);
+  }
+
+}
+
 function CreateFileIdDirectory(eventHandler, request) {
   var myself = this;
 
@@ -2125,7 +2376,20 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   this.DOWNLOAD_PROGRESS_EVENT = 'internal.download.progress_{fileId}';
   this.DOWNLOAD_DONE_EVENT = 'internal.download.finished_{fileId}';
   this.FILE_DECRYPTED = 'file.decrypted';
+  /**
+	 * Raised when a file is decrypted and ready to be saved.
+	 * @event file#decrypted
+	 * @type {function}
+	 * @param {String} fileId
+	 */
   this.DOWNLOAD_PROGRESS = 'download.progress';
+  /**
+	 * Subscribe to this event to receive download progress.
+	 * @event download#progress
+	 * @type {function}
+	 * @param {String} fileId
+	 * @param {Number} progress
+	 */
   this.states = {WAITING: 'WAITING', DOWNLOADING: 'DOWNLOADING', DOWNLOADED: 'DOWNLOADED', DECRYPTING: 'DECRYPTING'};
   this.MAX_CONCURRENT_DOWNLOADS = 1;
   this.MAX_CONCURRENT_DECRYPTIONS = 1;
@@ -2137,6 +2401,11 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   this.downloadUrls = {};
   this.ec2Proxy = false;
   this.responseParser = new ResponseParser(eventHandler);
+  this.workerPool = new WorkerPool(serverWorkerURI, workerEventListener);
+  this.fileId;
+  this.fileName;
+  this.fileIndexes = [];
+  this.fileWriteStream;
 
   myself.eventHandler.bind(myself.PENDING_DOWNLOADS_CHANGED_EVENT, startDownloads);
   myself.eventHandler.bind(myself.PENDING_DECRYPTION_CHANGED_EVENT, startDecrypting);
@@ -2158,10 +2427,37 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
 		
   eventListenerTracker.DownloadAndDecryptFile = messageListener;		
   window.addEventListener('message', messageListener, true);
+  
+  function getDownloadPathFromConfig(config, file) {
+    var downloadPath = "";
+          
+    if (config.path && config.fileName) {
+      downloadPath = path.join(config.path, config.fileName);
+    } else if (config.path) {
+      downloadPath = path.join(config.path, file.fileName);
+    } else if (config.fileName) {
+      downloadPath = config.fileName;
+    }
+    
+    return downloadPath;
+  }
+  
+  function createFileWriteStreamIfInConfig(config, file) {
+    if (config && (config.path || config.fileName)) {
+      var downloadPath = getDownloadPathFromConfig(config, file);
+      
+      myself.fileWriteStream = fs.createWriteStream(downloadPath);
+      myself.fileWriteStream.on('error', function(error) {
+        myself.eventHandler.raiseError("FAIL", "Write stream error: " + error);
+      });
+    }
+  }
 
   this.addFile = function(packageId, fileId, keyCode, config) {
 
     myself.getFileDetails(packageId, fileId, function(pkg, file) {
+      createFileWriteStreamIfInConfig(config, file);
+      
       config = buildConfig(config);
       config.storage.fileParts = file.parts;
 
@@ -2180,23 +2476,41 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   };
 
   this.addFileFromDirectory = function(packageId, directoryId, fileId, keyCode, config) {
+    new GetPackageInformation(myself.eventHandler, myself.request).execute(packageId, myself.async, function(pkg) {
+      myself.getFileDetailsFromDirectory(pkg.packageId, directoryId, fileId, function(file){
+        createFileWriteStreamIfInConfig(config, file);
+      
+        config = buildConfig(config);
+        config.storage.fileParts = file.fileParts;
 
-      myself.getFileFromDirectoryDetails(packageId, directoryId, fileId, function(pkg, file) {
-          config = buildConfig(config);
-          config.storage.fileParts = file.fileParts;
+        var checksum = createChecksum(keyCode, pkg.packageCode);
 
-      var checksum = createChecksum(keyCode, pkg.packageCode);
-      if(file.fileParts == 0) {
-          config.fileParts = 1;
-          myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':1, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING});
-      }
-      for(var i = 1; i<=file.fileParts; i++) {
-        myself.pendingDownloads.push({'packageId':packageId, 'directoryId': directoryId, 'fileId':fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':i, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING});
-      }
-
-      myself.progressMap[fileId] = 0;
-      myself.eventHandler.raise(myself.PENDING_DOWNLOADS_CHANGED_EVENT, {});
-	 });
+        if(file.fileKey != "" && file.fileKey != undefined){
+          var messageDecryptor = new DecryptMessage(myself.eventHandler);
+          messageDecryptor.serverWorkerURI = myself.workerPool.serverWorkerURI;
+          messageDecryptor.execute(file.fileKey, pkg.packageId, keyCode, pkg.serverSecret, function(decryptedFileKey){
+            // fileKey = decryptedFileKey;
+            if(file.fileParts == 0) {
+              myself.pendingDownloads.push({'packageId':pkg.packageId, 'directoryId': directoryId, 'fileId':file.fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':1, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING, 'fileName': file.fileName, 'fileKey': decryptedFileKey});
+            }
+            for(var i = 1; i<=file.fileParts; i++) {
+              myself.pendingDownloads.push({'packageId':pkg.packageId, 'directoryId': directoryId, 'fileId':file.fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':i, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING, 'fileName': file.fileName, 'fileKey': decryptedFileKey});
+            }
+            myself.progressMap[file.fileId] = 0;
+            myself.eventHandler.raise(myself.PENDING_DOWNLOADS_CHANGED_EVENT, {});
+          });
+        }else{
+          if(file.fileParts == 0) {
+            myself.pendingDownloads.push({'packageId':pkg.packageId, 'directoryId': directoryId, 'fileId':file.fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':1, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING, 'fileName': file.fileName, 'fileKey': file.fileKey});
+          }
+          for(var i = 1; i<=file.fileParts; i++) {
+            myself.pendingDownloads.push({'packageId':pkg.packageId, 'directoryId': directoryId, 'fileId':file.fileId, 'fileSize':file.fileSize, 'keycode': keyCode, 'serverSecret': pkg.serverSecret, 'checksum':checksum, 'part':i, 'parts':file.fileParts, 'config': config, 'state': myself.states.WAITING, 'fileName': file.fileName, 'fileKey': file.fileKey});
+          }
+          myself.progressMap[file.fileId] = 0;
+          myself.eventHandler.raise(myself.PENDING_DOWNLOADS_CHANGED_EVENT, {});
+        }
+      });
+    });
   };
 
 
@@ -2214,15 +2528,22 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     });
   };
 
-    this.getFileFromDirectoryDetails = function(packageId, directoryId, fileId, callback) {
-        var packageInfoHandler = new GetPackageInformation(myself.eventHandler, myself.request);
-        packageInfoHandler.execute(packageId, true, function(pkg) {
-            var fileInfoHandler = new GetFileFromDirectory(myself.eventHandler, myself.request);
-            fileInfoHandler.execute(packageId, directoryId, fileId, true, function(file) {
-                callback(pkg,file);
-            });
-        });
-    };
+  this.getFileDetailsFromDirectory = function(packageId, directoryId, fileId, callback) {
+    var fileDetailsHandler = new GetFileFromDirectory(myself.eventHandler, myself.request);
+    fileDetailsHandler.execute(packageId, directoryId, fileId, true, function(file) {
+      callback(file);
+    });
+  };
+
+  this.getFileFromDirectoryDetails = function(packageId, directoryId, fileId, callback) {
+    var packageInfoHandler = new GetPackageInformation(myself.eventHandler, myself.request);
+    packageInfoHandler.execute(packageId, true, function(pkg) {
+      var fileInfoHandler = new GetFileFromDirectory(myself.eventHandler, myself.request);
+      fileInfoHandler.execute(packageId, directoryId, fileId, true, function(file) {
+        callback(pkg,file);
+      });
+    });
+  };
 
   this.downloadFile = function (endpoint, requestBody, progressEvent, finishedEvent) {
 	var requestData = JSON.stringify(requestBody);
@@ -2339,7 +2660,7 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
     //var worker = myself.workerPool.getWorker();
     var randomness = sjcl.codec.utf8String.fromBits(sjcl.random.randomWords(16,6));
     window.postMessage({'cmd': 'decrypt_file',
-      'decryptionKey': generateDecryptionKey(fileObj.serverSecret, fileObj.keycode),
+      'decryptionKey': fileObj.fileKey||generateDecryptionKey(fileObj.serverSecret, fileObj.keycode),
       'randomness': randomness,
       'fileId': fileObj.fileId,
       'file': fileObj.encryptedData,
@@ -2358,6 +2679,7 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
         //if(part === fileObject.parts) {
         fileObject.config.storage.save(fileId);
         myself.eventHandler.raise(myself.FILE_DECRYPTED, {fileId: fileId});
+        myself.fileWriteStream = null;
         //}
       }
     });
@@ -2406,6 +2728,8 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
               myself.downloadUrls[fileId + "-" + part] = url;
             }
             callback();
+         } else {
+             myself.eventHandler.raiseError("FAIL", result.message);
          }
       });
   }
@@ -2525,7 +2849,14 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
 
   function buildConfig(config) {
     config = (config === undefined) ? {} : config;
-	config.storage = (config.storage === undefined) ? new DefaultStorage(myself.eventHandler) : config.storage;
+    
+    if (config.storage === undefined) {
+      if (myself.fileWriteStream) {
+        config.storage = new WriteStreamStorage(myself.eventHandler, myself.fileWriteStream, config);
+      } else {
+        config.storage = new DefaultStorage(myself.eventHandler);
+      }
+    }
 	config.api = (config.api === undefined) ? myself.DOWNLOAD_API : config.api;
     return config;
   }
@@ -2543,10 +2874,22 @@ function EncryptAndUploadFile (eventHandler, request) {
   var myself = this;
 
   this.PROGRESS_EVENT = 'sendsafely.progress';
+  /**
+	 * Subscribe to this event to receive upload progress.
+	 * @event sendsafely#progress
+	 * @param {String} fileId
+	 * @param {Number} percent
+	 */
   this.LIMIT_EXCEEDED_EVENT = 'limit.exceeded';
   this.DUPLICATE_FILE_EVENT = 'duplicate.file';
   this.UPLOAD_ABORT_EVENT = 'file.upload.cancel';
   this.UPLOAD_ERROR_EVENT = 'file.upload.error';
+  /**
+	 * Raised when an upload error occurs.
+	 * @event file.upload#error
+	 * @param {String} fileId
+	 * @param {String} message
+	 */
   this.SERVER_ERROR_EVENT = 'server.error';
   this.INVALID_FILE_NAME_EVENT = 'invalid.file.name';
 
@@ -2607,7 +2950,14 @@ function EncryptAndUploadFile (eventHandler, request) {
             //TODO: REVIEW
             var event = {'fileId': files[index].id==undefined?resp.message:files[index].id, 'filePart':files[index].part, "parts":parts, 'name': filename, 'size': files[index].size, 'packageId': packageId, 'type': type};
             myself.eventHandler.raise("sendsafely.files.attached", event);
-            statusCb("ATTACH", files[index]);
+            /**
+			 * @event sendsafely.files#attached
+			 * @param {String} fileId
+			 * @param {String} name
+			 * @param {Number} size
+			 * @param {String} packageId
+			 */
+			statusCb("ATTACH", files[index]);
 
             if(myself.encrypting.length === 1){
               myself.uploadPart(statusCb, finished);
@@ -3709,6 +4059,7 @@ function GetFileFromDirectory (eventHandler, request) {
       data.uploaded = res.file.uploaded;
       data.uploadedStr = res.file.uploadedStr;
       data.fileParts = res.file.fileParts;
+      data.fileKey = res.file.fileKey;
 
       finished(data);
     }, myself.customError);
@@ -3764,6 +4115,13 @@ function GetPackageActivityLog (eventHandler, request) {
     this.endpoint = { "url": "/package/{packageId}/activityLog/", "HTTPMethod" : "POST", "mimetype": "application/json"};
     this.eventHandler = eventHandler;
     this.customErrorEvent = 'package.information.failed';
+    /**
+    * Raised if an error happens. Code contains a response code originating from the server. Message is a more descriptive error message
+	  * @event package.information#failed
+	  * @type function
+	  * @param code
+	  * @param  message
+	  */
     this.responseParser = new ResponseParser(eventHandler);
 
     var myself = this;
