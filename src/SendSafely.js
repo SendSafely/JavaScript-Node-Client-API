@@ -37,7 +37,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   this.keyGeneratorURI = undefined;
   this.uploadAPI = undefined;
   this.url = url;
-  this.requestAPI = (requestAPI === undefined) ? "JS_API" : requestAPI;
+  this.requestAPI = (requestAPI === undefined) ? "NODE_API" : requestAPI;
   
   sjcl.codec.utf8String.fromBits = function(a) {
     var b = "",
@@ -556,7 +556,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	 * @param {String} keyCode The key code associated with the package.
 	 * @param {String} serverSecret The server secret associated with the package.
 	 * @param {List<file>} files  An array of files that are being uploaded.
-	 * @param {String} uploadType Optional Leave blank (or specify 'JS_API').
+	 * @param {String} uploadType Optional Leave blank (or specify 'NODE_API').
 	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
 	 * @fires {sendsafely#progress}
 	 * @fires {file.upload#error}
@@ -594,7 +594,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	 * @param {String} keyCode The key code associated with the package.
 	 * @param {String} serverSecret The server secret associated with the package.
 	 * @param {List<file>} files  An array of files that are being uploaded.
-	 * @param {String} uploadType Optional Leave blank (or specify 'JS_API').
+	 * @param {String} uploadType Optional Leave blank (or specify 'NODE_API').
 	 * @param {String} directoryId The directoryId of the directory that you want to add the files to.
 	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
 	 * @fires {sendsafely#progress}
@@ -704,12 +704,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	 * @param packageId {String} The packageId of the package containing the file.
 	 * @param fileId {String} The fileId of the file to be downloaded. 
 	 * @param keyCode {String} The keycode associated with the package.
-     * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
+   * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
    * @fires {sendsafely#error}
 	 * @fires {download#progress}
 	 * @fires {file#decrypted}
 	 * @fires {save#file}
-     * @fires {file#saved}
+   * @fires {file#saved}
 	 * @returns {void}
 	 */
   this.downloadFile = function(packageId, fileId, keyCode, config) {
@@ -723,18 +723,19 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
   };
 
   /**
-	 * Downloads and decrypts an individual file from a specific directory of the package.
-	 * @param packageId {String} The packageId of the package containing the file.
-	 * @param fileId {String} The fileId of the file to be downloaded. 
-	 * @param keyCode {String} The keycode associated with the package.
-     * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
-	 * @fires {sendsafely#error}
-	 * @fires {download#progress}
-	 * @fires {file#decrypted}
-	 * @fires {save#file}
-     * @fires {file#saved}
-	 * @returns {void}
-	 */
+   * Downloads and decrypts an individual file from a specific directory of the package.
+   * @param packageId {String} The packageId of the package containing the file.
+   * @param directoryId {String} The directoryId of the directory containing the file.
+   * @param fileId {String} The fileId of the file to be downloaded.
+   * @param keyCode {String} The keycode associated with the package.
+   * @param config {Json} JSON configuration object required for file downloads over 2GB. To enable large file downloads, pass a JSON object with a path and/or fileName property. For example {path:'downloads', fileName:'example.txt'} results in the downloaded file being named "example.txt" to the "downloads" directory relative to the working directory. If the fileName property is omitted, the fileName returned from SendSafely will be used.
+   * @fires {sendsafely#error}
+   * @fires {download#progress}
+   * @fires {file#decrypted}
+   * @fires {save#file}
+   * @fires {file#saved}
+   * @returns {void}
+   */
   this.downloadFileFromDirectory = function(packageId, directoryId, fileId, keyCode, config) {
     if(myself.downloadHandler === undefined) {
       myself.downloadHandler = new DownloadAndDecryptFile(myself.eventHandler, myself.request, myself.serverWorkerURI);
@@ -846,7 +847,22 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
     catch (err) {myself.eventHandler.raiseError(myself.NOT_INITIALIZED_ERROR, err.message); return;}
 
     myself.executor.run(function() {
-      new CreatePackage(myself.eventHandler, myself.request).setVdr(true).execute(myself.async, finished);
+      new CreatePackage(myself.eventHandler, myself.request).setVdr(true).execute(myself.async, function (packageId, serverSecret, packageCode, keyCode) {
+        myself.unbind('keycodes.uploaded');
+        myself.on('keycodes.uploaded', () => finished(packageId, serverSecret, packageCode, keyCode));
+        
+        myself.unbind('received.publickeys');
+        
+        myself.on('received.publickeys', function (publickeys) {
+          myself.uploadKeycode(packageId, publickeys, keyCode, function() {
+            myself.eventHandler.raise('keycodes.uploaded', {});
+          });		
+        });
+        
+        myself.getPublicKeys(packageId, function (publicKeys) {
+          myself.eventHandler.raise('received.publickeys', publicKeys);
+        });
+      });
     }, 'Create Package Failed');
   };
 
@@ -2393,7 +2409,7 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   this.states = {WAITING: 'WAITING', DOWNLOADING: 'DOWNLOADING', DOWNLOADED: 'DOWNLOADED', DECRYPTING: 'DECRYPTING'};
   this.MAX_CONCURRENT_DOWNLOADS = 1;
   this.MAX_CONCURRENT_DECRYPTIONS = 1;
-  this.DOWNLOAD_API = 'JS_API';
+  this.DOWNLOAD_API = 'NODE_API';
   this.eventHandler = eventHandler;
   this.request = request;
   this.pendingDownloads = [];
@@ -3134,7 +3150,7 @@ function EncryptAndUploadFile (eventHandler, request) {
 
     var multipart = {};
     multipart["fileId"] = fileId;
-    multipart["uploadType"] = "JS_API";
+    multipart["uploadType"] = "NODE_API";
     multipart["filePart"] = filePart;
     var multiPartForm = createMultiPartForm(boundary, JSON.stringify(multipart), encryptedFile.file);
     var url = requestType.url;
@@ -3387,7 +3403,7 @@ function EncryptAndUploadFile (eventHandler, request) {
 
           var messageData = {};
           messageData["fileId"] = data.fileId;
-          messageData["uploadType"] = "JS_API";
+          messageData["uploadType"] = "NODE_API";
           messageData["filePart"] = data.part;
 
           // Check if the part is marked for deletion before actually pushing it.
@@ -4515,7 +4531,7 @@ function SaveMessage (eventHandler, request) {
   this.UPLOAD_ERROR_EVENT = 'message.upload.error';
 
   this.request = request;
-  this.uploadAPI = 'JS_API';
+  this.uploadAPI = 'NODE_API';
   this.endpoint = { "url": "/package/{packageId}/message/", "HTTPMethod" : "PUT", "mimetype": "application/json"};
   this.eventHandler = eventHandler;
   this.responseParser = new ResponseParser(eventHandler);
@@ -4876,7 +4892,7 @@ function VerifyVersion (eventHandler, request) {
   this.execute = function(api_identifier, async, finished) {
     var endpoint = myself.request.extend({}, myself.endpoint);
     endpoint.url = endpoint.url.replace("{versionNo}", myself.VERSION_NUMBER);
-    endpoint.url = endpoint.url.replace("{api}", (api_identifier == undefined) ? "JS_API" : api_identifier);
+    endpoint.url = endpoint.url.replace("{api}", (api_identifier == undefined) ? "NODE_API" : api_identifier);
 
     var response = myself.request.sendRequest(endpoint, null, async);
     myself.responseParser.processAjaxData(response, function(res) {
