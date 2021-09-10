@@ -10,6 +10,8 @@ const openpgp = require('openpgp');
 const $ = require("jquery")(window);
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const path = require("path");
+const {AnonymousRequest} = require('./Dropzone');
+
 eval(fs.readFileSync(__dirname + '/uploadWorker.js').toString());
 eval(fs.readFileSync(__dirname + '/keyGeneratorWorker.js').toString());
 var eventListenerTracker = {};
@@ -64,7 +66,12 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 
   this.eventHandler = new EventHandler(myself);
   this.executor = new Executor(myself.eventHandler);
-  this.request = new SignedRequest(myself.eventHandler, url, apiKeyId, apiKeySecret, myself.requestAPI);
+  
+  if (apiKeyId !== null && apiKeySecret === null){
+  	this.request = new AnonymousRequest(myself.eventHandler, url, apiKeyId, myself.requestAPI);
+  } else {
+    this.request = new SignedRequest(myself.eventHandler, url, apiKeyId, apiKeySecret, myself.requestAPI);
+  }
 
 	//Main API functions
 	//Functions
@@ -1853,7 +1860,7 @@ function CreateFileId(eventHandler, request) {
     postData['parts'] = parts;
     postData['filesize'] = data.size;
 
-    if(myself.directoryId !== undefined) {
+    if(myself.directoryId !== undefined && myself.directoryId !== "") {
       postData['directoryId'] = myself.directoryId;
     }
     
@@ -2992,7 +2999,7 @@ function EncryptAndUploadFile (eventHandler, request) {
           myself.abort();
           myself.eventHandler.raise(myself.INVALID_FILE_NAME_EVENT, {error: resp.response, message: resp.message});
         } else if(resp.response === "INVALID_FILE_EXTENSION"){
-        	alert(resp.message);
+	        myself.eventHandler.raise(myself.INVALID_FILE_NAME_EVENT, {error: resp.response, message: resp.message});
         } else {
           myself.eventHandler.raise(myself.SERVER_ERROR_EVENT, {error: resp.response, message: resp.message});
         }
@@ -3175,7 +3182,8 @@ function EncryptAndUploadFile (eventHandler, request) {
             uploadCb({loaded: responseData.length});
         });
         res.on('end', function() {
-        	var data = res;
+	        uploadCb({loaded: contentLength});
+	        var data = res;
             var response = {response:"SERVER_ERROR", message: "A server error has occurred, please try again."};
 
             if(myself.ec2Proxy && responseData !== undefined){           	
@@ -4901,5 +4909,16 @@ function VerifyVersion (eventHandler, request) {
   }
 
 }
+
+SendSafely.SendSafelyDropzone = function SendSafelyDropzone(url, dropzoneId) {
+	const myself = new SendSafely(url, dropzoneId, null);
+	myself.notifyRecipients = false;
+
+	myself.setUnconfirmedSender = function(email){
+		myself.unconfirmedSender = email;
+	}
+	
+	return myself
+};
 
 module.exports = SendSafely;
