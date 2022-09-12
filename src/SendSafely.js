@@ -11,10 +11,12 @@ const $ = require("jquery")(window);
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const path = require("path");
 const {AnonymousRequest} = require('./Dropzone');
+const {FileUtil} = require('./FileUtil');
 
 eval(fs.readFileSync(__dirname + '/uploadWorker.js').toString());
 eval(fs.readFileSync(__dirname + '/keyGeneratorWorker.js').toString());
 var eventListenerTracker = {};
+let ssLegacyUpload = false;
 
 /**
  * @description The only constructor for the library.
@@ -1856,7 +1858,7 @@ function CreateFileId(eventHandler, request) {
 
     var postData = {};
     postData['filename'] = encodeURI(fileName);
-    postData['uploadType'] = uploadType;
+    postData['uploadType'] = 'NODE_API';
     postData['parts'] = parts;
     postData['filesize'] = data.size;
 
@@ -2950,9 +2952,10 @@ function EncryptAndUploadFile (eventHandler, request) {
     myself.getFileIDs(packageId, directoryId, keyCode, serverSecret, files, uploadType, statusCb, finished);
   };
 
-  this.getFileIDs = function (packageId, directoryId, keyCode, serverSecret, files, uploadType, statusCb, finished) {
-    myself.addEncryptionKey(packageId, serverSecret, keyCode);
-    function handleResponse(index, parts, files) {
+  this.getFileIDs = function (packageId, directoryId, keyCode, serverSecret, filesPath, uploadType, statusCb, finished) {
+      let files = [];
+      myself.addEncryptionKey(packageId, serverSecret, keyCode);
+    function handleResponse(index, parts, files, fileUtil) {
       var serverFilename = (files[index].name === undefined) ? myself.defaultFileName : files[index].name;
       myself.responseParser.processAjaxDataRaw(myself.createFileID(packageId, directoryId, files[index], serverFilename, parts, uploadType, myself.async), function (resp) {
         if(resp.response === "SUCCESS") {
@@ -2967,11 +2970,11 @@ function EncryptAndUploadFile (eventHandler, request) {
           if( files[index].url === undefined ) {
             //Add to encrypting Queue
             var filename = (files[index].name === undefined) ? myself.defaultFileName : files[index].name;
-            myself.encrypting.push({"packageId": packageId, "directoryId": directoryId, "file":files[index], "parts": parts, "part": 1, "name": filename, "fileStart": 0, "id": resp.message});
+            myself.encrypting.push({"packageId": packageId, "directoryId": directoryId, "file":files[index], "parts": parts, "part": 1, "name": filename, "fileStart": 0, "id": resp.message, "fileUtil": fileUtil});
 
             var type= (directoryId === undefined) ? undefined : "directory";
             //TODO: REVIEW
-            var event = {'fileId': files[index].id==undefined?resp.message:files[index].id, 'filePart':files[index].part, "parts":parts, 'name': filename, 'size': files[index].size, 'packageId': packageId, 'type': type};
+            var event = {'fileId': files[index].id === undefined?resp.message:files[index].id, 'filePart':files[index].part, "parts":parts, 'name': filename, 'size': files[index].size, 'packageId': packageId, 'type': type};
             myself.eventHandler.raise("sendsafely.files.attached", event);
             /**
 			 * @event sendsafely.files#attached
@@ -3006,16 +3009,35 @@ function EncryptAndUploadFile (eventHandler, request) {
       });
     }
 
-    for (var i = files.length - 1; i >= 0; i--) {
-      var parts;
-      if(files[i].size > (myself.SEGMENT_SIZE/4)) {
-        parts = 1 + Math.ceil((files[i].size-(myself.SEGMENT_SIZE/4))/myself.SEGMENT_SIZE);
-      } else {
-        parts = 1;
-      }
+      let _loop = function _loop(i, _p) {
+          _p = _p.then(function (_) {
+              return new Promise(function (resolve) {
+                  let f = filesPath[i];
 
-      handleResponse(i, parts, files);
-    }
+                  if(typeof f === 'object' && f.hasOwnProperty('size')) {
+                      ssLegacyUpload = true;
+                      let parts = 1;
+                      if(f.size > (myself.SEGMENT_SIZE/4)) {
+                          parts = 1 + Math.ceil((f.size - (myself.SEGMENT_SIZE / 4)) / myself.SEGMENT_SIZE);
+                      }
+                      handleResponse(i, parts, filesPath, null);
+                      resolve();
+                  } else {
+                      let fileUtil = new FileUtil({filePath: f, callback: function(){}});
+                      fileUtil.init().then(function(file) {
+                          files.push(file);
+                          handleResponse(i, file.totalParts, files, fileUtil);
+                          resolve();
+                      });
+                  }
+              });
+          });
+          p = _p;
+      };
+
+      for (let i = 0, p = Promise.resolve(); i < filesPath.length; i++) {
+          _loop(i, p);
+      }
   };
 
   this.createFileID = function(packageId, directoryId, data, fileName, parts, uploadType, async) {
@@ -3036,48 +3058,59 @@ function EncryptAndUploadFile (eventHandler, request) {
   this.uploadPart = function (statusCb, finished) {
     if(myself.encrypting.length >= 1){
       var currentFile = myself.encrypting[0];
-      while(myself.segmentsCurrentlyEncrypting < myself.MAX_CONCURRENT_ENCRYPTIONS) {
-        if(currentFile.part === 1){
-          var fileObj = {};
-          var fileSegment = _slice(currentFile.file.data, 0, Math.min((myself.SEGMENT_SIZE/4), currentFile.file.size));
-          fileObj.fileSegment = fileSegment;
-          fileObj.id = currentFile.id;
-          fileObj.part = currentFile.part;
-          fileObj.parts = currentFile.parts;
-          fileObj.name = currentFile.name;
-          fileObj.directoryId = currentFile.directoryId;
 
-          myself.encrypting[0].fileStart = Math.min(myself.SEGMENT_SIZE/4, myself.encrypting[0].file.size);
-        }
-        else if(currentFile.part <= currentFile.parts){
-          var fileObj = {};
-          var fileSegment = _slice(currentFile.file.data, currentFile.fileStart, Math.min(currentFile.fileStart+(myself.SEGMENT_SIZE), currentFile.file.size));
-          fileObj.fileSegment = fileSegment;
-          fileObj.id = currentFile.id;
-          fileObj.part = currentFile.part;
-          fileObj.parts = currentFile.parts;
-          fileObj.name = currentFile.name;
-          //TODO: Added during merge...confirm this
-          fileObj.directoryId = currentFile.directoryId;
+      if(ssLegacyUpload) {
+          while(myself.segmentsCurrentlyEncrypting < myself.MAX_CONCURRENT_ENCRYPTIONS) {
+              let fileSegment;
 
-          myself.encrypting[0].fileStart = Math.min(myself.encrypting[0].fileStart+(myself.SEGMENT_SIZE), myself.encrypting[0].file.size);
-        }
-        else{
-          //Finished last
-          myself.encrypting.shift();
-          return myself.uploadPart(statusCb, finished);
-        }
+              if(currentFile.part === 1) {
+                  fileSegment = _slice(currentFile.file.data, 0, Math.min((myself.SEGMENT_SIZE/4), currentFile.file.size))
+                  myself.encrypting[0].fileStart = Math.min(myself.SEGMENT_SIZE/4, myself.encrypting[0].file.size);
+              } else if(currentFile.part <= currentFile.parts) {
+                  fileSegment = _slice(currentFile.file.data, currentFile.fileStart, Math.min(currentFile.fileStart+(myself.SEGMENT_SIZE) , currentFile.file.size))
+                  myself.encrypting[0].fileStart = Math.min(myself.encrypting[0].fileStart+(myself.SEGMENT_SIZE), myself.encrypting[0].file.size);
+              } else {
+                  myself.encrypting.shift();
+                  return myself.uploadPart(statusCb, finished);
+              }
 
-        myself.encrypting[0].part++;
+              readFileSegmentAndUpload(fileSegment);
+          }
 
-        myself.segmentsCurrentlyEncrypting++;
-
-        var packageId = currentFile.packageId;
-        var directoryId = currentFile.directoryId;
-        myself.sendFileToWorker(fileObj, packageId, directoryId, currentFile.file.size, statusCb, finished, function(){
-          myself.uploadPart(statusCb, finished);
-        });
+      } else {
+          if(!currentFile.fileUtil.eof) {
+              currentFile.fileUtil.callback = readFileSegmentAndUpload;
+              currentFile.fileUtil.read();
+          }
       }
+
+        function readFileSegmentAndUpload(fileSegment) {
+            var fileObj = {};
+            fileObj.fileSegment = ssLegacyUpload? fileSegment : fileSegment.data;
+            fileObj.id = currentFile.id;
+            fileObj.part = currentFile.part;
+            fileObj.parts = currentFile.parts;
+            fileObj.name = currentFile.name;
+            fileObj.directoryId = currentFile.directoryId;
+
+            myself.encrypting[0].part++;
+            myself.segmentsCurrentlyEncrypting++;
+
+            var packageId = currentFile.packageId;
+            var directoryId = currentFile.directoryId;
+            myself.sendFileToWorker(fileObj, packageId, directoryId, currentFile.file.size, statusCb, finished, function(){
+                if(ssLegacyUpload) {
+                    myself.uploadPart(statusCb, finished);
+                } else {
+                    if(myself.segmentsCurrentlyEncrypting < myself.MAX_CONCURRENT_ENCRYPTIONS && !fileSegment.complete) {
+                        currentFile.fileUtil.read();
+                    } else if(fileSegment.complete) {
+                        myself.encrypting.shift();
+                        return myself.uploadPart(statusCb, finished);
+                    }
+                }
+            });
+        }
     }
   };
 
