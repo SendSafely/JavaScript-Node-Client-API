@@ -4,7 +4,6 @@ const window = new Window();
 const self = window;
 const sjcl = require("sjcl");
 const crypto = require("crypto");
-const https = require('https');
 const fs = require('fs');
 const openpgp = require('openpgp');
 const $ = require("jquery")(window);
@@ -12,6 +11,7 @@ var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const path = require("path");
 const {AnonymousRequest} = require('./Dropzone');
 const {FileUtil} = require('./FileUtil');
+const {FetchRequest} = require('./FetchRequest');
 
 eval(fs.readFileSync(__dirname + '/uploadWorker.js').toString());
 eval(fs.readFileSync(__dirname + '/keyGeneratorWorker.js').toString());
@@ -564,7 +564,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	 * @param {String} packageId The packageId that you are adding the file to.
 	 * @param {String} keyCode The key code associated with the package.
 	 * @param {String} serverSecret The server secret associated with the package.
-	 * @param {List<file>} files  An array of files that are being uploaded.
+	 * @param {List<absoluteFilePath>} An array of absolute file path to files that are being uploaded or an array of <File> (Deprecated) that are being uploaded.
 	 * @param {String} uploadType Optional Leave blank (or specify 'NODE_API').
 	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
 	 * @fires {sendsafely#progress}
@@ -602,7 +602,7 @@ function SendSafely(url, apiKeyId, apiKeySecret, requestAPI){
 	 * @param {String} packageId The packageId that you are adding the file to.
 	 * @param {String} keyCode The key code associated with the package.
 	 * @param {String} serverSecret The server secret associated with the package.
-	 * @param {List<file>} files  An array of files that are being uploaded.
+	 * @param {List<absoluteFilePath>} An array of absolute file path to files that are being uploaded or an array of <File> (Deprecated) that are being uploaded.
 	 * @param {String} uploadType Optional Leave blank (or specify 'NODE_API').
 	 * @param {String} directoryId The directoryId of the directory that you want to add the files to.
 	 * @param {function} finished function (packageId, fileId, fileSize, fileName)
@@ -1011,101 +1011,6 @@ function SignedRequest(eventHandler, url, apiKey, apiKeySecret, requestAPI) {
       retryCount: 2 //Need to Implement.
     })
   };
-  
-  this.getHTTPSOptionForFileUpload = function (uri, method, messageData, boundary, isEC2Proxy) {
-		var timestamp = myself.dateString();
-	    var header = myself.apiKey + myself.apiPrefix + uri + timestamp + messageData;	    
-		var signature = myself.signMessage(header);
-		var headers = {
-			    'Content-Type': 'multipart/form-data; boundary=' + boundary,
-			    'ss-api-key':myself.apiKey,
-			    'ss-request-timestamp': timestamp,
-			    'ss-request-signature': signature,
-			    'ss-request-api': myself.requestAPI
-			  };
-		var url = new URL(myself.url + myself.apiPrefix + uri);
-		
-		if(!isEC2Proxy) {
-			headers = {};
-			url = new URL(uri);
-		}
-			        
-	    var options = {
-	    	hostname: url.hostname,
-	    	port: url.port,
-	    	path: url.pathname + url.search,
-	    	headers: headers,
-	    	method: method,
-	    }
-
-	    return options;
-	  }
-
-  this.getHTTPObjForFileUpload = function (uri, messageData, boundary, a_sync) {
-
-    var timestamp = myself.dateString();
-    var header = myself.apiKey + myself.apiPrefix + uri + timestamp + messageData;
-
-    var signature = myself.signMessage(header);
-
-    var xhr = new XMLHttpRequest();
-    var url = myself.url + myself.apiPrefix + uri;
-
-    xhr.open('POST', url, a_sync);
-
-    xhr.setRequestHeader('Content-Type', 'multipart/form-data; boundary=' + boundary);
-    xhr.setRequestHeader('ss-api-key', myself.apiKey);
-    xhr.setRequestHeader('ss-request-timestamp', timestamp);
-    xhr.setRequestHeader('ss-request-signature', signature);
-    xhr.setRequestHeader('ss-request-api', myself.requestAPI);
-
-    return xhr;
-  };
-
-  this.getHTTPObjForFileDownload = function (uri, messageData) {
-
-    var timestamp = myself.dateString();
-    var header = myself.apiKey + myself.apiPrefix + uri + timestamp + messageData;
-
-    var signature = myself.signMessage(header);
-
-    var xhr = new XMLHttpRequest();
-    var url = myself.url + myself.apiPrefix + uri;
-
-    xhr.open('POST', url, true);
-
-    xhr.responseType = 'arraybuffer';
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('ss-api-key', myself.apiKey);
-    xhr.setRequestHeader('ss-request-timestamp', timestamp);
-    xhr.setRequestHeader('ss-request-signature', signature);
-    return xhr;
-  };
-  
-  this.getHTTPSOptionForFileDownload = function (uri, messageData) {
-	var timestamp = myself.dateString();
-	var header = myself.apiKey + myself.apiPrefix + uri + timestamp + messageData;
-
-	var signature = myself.signMessage(header);
-	var method = 'GET';
-	var headers = {
-		    'Content-Type': 'application/json',
-		    'Content-Length': messageData.length,
-		    'ss-api-key':myself.apiKey,
-		    'ss-request-timestamp': timestamp,
-		    'ss-request-signature': signature
-		  };
-		      
-    var url = new URL(uri);	    
-    var options = {
-    	hostname: url.hostname,
-    	port: url.port,
-    	path: url.pathname + url.search,
-    	headers: headers,
-    	method: method,
-    }
-    return options;
-  }
 
 	/**
 	 * Generates a ISO Timestamp to the nearest second
@@ -2571,61 +2476,42 @@ function DownloadAndDecryptFile (eventHandler, request, serverWorkerURI) {
   };
 
   this.downloadFile = function (endpoint, requestBody, progressEvent, finishedEvent) {
-	var requestData = JSON.stringify(requestBody);
-    var downloadedBytes = 0;    
-    var options = myself.request.getHTTPSOptionForFileDownload(endpoint, requestData, myself.ec2Proxy);
-    var downloadedData = [];
+	let requestData = JSON.stringify(requestBody);
+    let request = new FetchRequest({signedRequest:false});
+    let res = undefined;
 
-    if (true || ! myself.ec2Proxy) {
-    	options.headers = {};
-    	requestData = null;
+    if (true || !myself.ec2Proxy) {
+        requestData = null;
+        request = request.sendRequest(endpoint, {method: 'GET'});
     } else {
-		options.method = 'POST'
+        // download failover is not supported yet.
+        request = new FetchRequest({url: myself.request.url, apiKey: myself.request.apiKey, apiKeySecret: myself.request.apiKeySecret});
+        request = request.sendSignedRequest({url: endpoint, HTTPMethod: 'POST', mimetype: 'application/json'}, requestData);
     }
-    
-    var req = https.request(options, function(res) {
-    
-        res.on('data', function(chunk) {
-        	downloadedData.push(chunk);
-        	if(isValidResponse(res)) {
-        		var bytesSinceLastUpdate = chunk.length;
-                downloadedBytes += chunk.length;
-                myself.eventHandler.raise(progressEvent, bytesSinceLastUpdate);             
-        	}         
-        });
-        res.on('end', function() {
-        	downloadedData = Buffer.concat(downloadedData);
-        	if(isValidResponse(res)) {
-                var ab = new ArrayBuffer(downloadedData.length);
-                var formattedResponse = new Uint8Array(ab);
-                for (var i = 0; i < downloadedData.length; ++i) {
-                	formattedResponse[i] = downloadedData[i];
-                }
-                myself.eventHandler.raise(finishedEvent, formattedResponse);
-        	} else {
-        		// parse error from server
-        		downloadedData = JSON.parse(downloadedData.toString());
-        		raiseDownloadError(res);
-        	}
-        });
-        
-    }).on('error', function(err) {
-    	req.end();
-        raiseDownloadError(err);   	
+
+    request.then(function(response) {
+        res = response;
+        if(isValidResponse(response)) {
+            myself.eventHandler.raise(progressEvent, response.size);
+            return response.arrayBuffer();
+        } else {
+            return response.json();
+        }
+    }).then(function(data){
+        if(isValidResponse(res)) {
+            let formattedResponse = new Uint8Array(data);
+            myself.eventHandler.raise(finishedEvent, formattedResponse);
+        } else {
+            raiseDownloadError(data);
+        }
     });
-        
-    if(myself.ec2Proxy) {
-    	req.write(requestData);
-    }
-    
-    req.end();
     
     function isValidResponse(res) {
-    	return res.statusCode === 200 && !res.headers['content-type'].includes("application/json");  		
+    	return res.status === 200 && (res.headers.has('content-type') && !res.headers.get['content-type']?.toLowerCase().includes('application/json'));
     }
     
     function raiseDownloadError(res) {
-    	var debugStr = 'Response Code: ' + res.statusCode + ', Response Text: ' + res.statusMessage + ', Error: ' + (res.message || downloadedData.response);
+    	let debugStr = 'Response Code: ' + res.statusCode + ', Response Text: ' + res.statusMessage + ', Error: ' + (res.message);
         console.log(debugStr);
     	myself.eventHandler.raiseError("FAIL", "Server returned an error: " + debugStr);
     }
@@ -3184,133 +3070,95 @@ function EncryptAndUploadFile (eventHandler, request) {
   };
 
   this.SendPartToServer = function(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator) {
+    let fileId = messageData.fileId;
+    let filePart = messageData.filePart;
+    let multipart = {fileId: fileId, uploadType: 'NODE_API', filePart: filePart};
+    let multiPartForm = createMultiPartForm(boundary, JSON.stringify(multipart), encryptedFile.file);
+    let url = requestType.url;
+    let method = 'POST';
+    let contentLength = Buffer.from(multiPartForm.buffer).length;
+    let request = new FetchRequest({url: myself.request.url, apiKey: myself.request.apiKey, apiKeySecret: myself.request.apiKeySecret});
+    let res = undefined;
 
-    var fileId = messageData.fileId;
-    var filePart = messageData.filePart;
-
-    var multipart = {};
-    multipart["fileId"] = fileId;
-    multipart["uploadType"] = "NODE_API";
-    multipart["filePart"] = filePart;
-    var multiPartForm = createMultiPartForm(boundary, JSON.stringify(multipart), encryptedFile.file);
-    var url = requestType.url;
-    var method = "POST"
-    var contentLength = Buffer.from(multiPartForm.buffer).length;
-    	
     if (!myself.ec2Proxy) {
-      url = myself.uploadUrls[fileId][filePart];
-      method = "PUT";
-      contentLength = Buffer.from(encryptedFile.file).length;
-    }
-    
-    var responseData = "";
-    
-    var options = myself.request.getHTTPSOptionForFileUpload(url, method, JSON.stringify(messageData), boundary, myself.ec2Proxy);	
-    options.headers['Content-Length'] = contentLength;
-    
-    var req = https.request(options, function(res) {
-      
-        res.on('data', function(chunk) {
-        	responseData += chunk;
-            uploadCb({loaded: responseData.length});
-        });
-        res.on('end', function() {
-	        uploadCb({loaded: contentLength});
-	        var data = res;
-            var response = {response:"SERVER_ERROR", message: "A server error has occurred, please try again."};
-
-            if(myself.ec2Proxy && responseData !== undefined){           	
-              try {            
-                response = JSON.parse(responseData.toString());
-              } catch (e) {
-              }
-            }
-            if(myself.ec2Proxy && response.response == "LIMIT_EXCEEDED")
-            {
-              myself.eventHandler.raise(myself.LIMIT_EXCEEDED_EVENT, {error: response.message});
-            }
-            else if(myself.ec2Proxy && response.response === "AUTHENTICATION_FAILED"){
-              myself.removeFileFromQueue(messageData.fileId);
-              myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: 'AUTHENTICATION_FAILED', message: response.message});
-            }
-            else if( (myself.ec2Proxy && response.response == "SUCCESS") || (! myself.ec2Proxy && res.statusCode == 200) ) {
-              //response.fileId = response.message;
-              var discard = myself.uploading.shift();
-              discard = null;
-
-              myself.eventHandler.unbind(myself.UPLOAD_ABORT_EVENT, eventId);
-              if(encryptedFile.part == encryptedFile.parts)
-              {
-                if (! myself.ec2Proxy)
-                {
-                  var counter = 0;
-                  myself.markFileComplete(packageId, fileId, a_sync, function() { done_callback(packageId, fileId, filesize, filename); }, function() { myself.eventHandler.raise(myself.SERVER_ERROR_EVENT, {error: "FILE_INCOMPLETE", message: "Your file did not upload completely. Please refresh and try again."});}, counter);
-                }
-                else
-                {
-                  done_callback(packageId, fileId, filesize, filename);
-                }
-              }
-        	  if(myself.uploading.length != 0){
-                  myself.nextUploadFile(done_callback, progress_callback);
-              }
-            }
-            else
-            {
-              if(myself.markedAsDeleted[messageData.fileId] == undefined) {
-                if(retryIterator == undefined) {retryIterator = 1;}
-                if(retryIterator < 5) {
-                  myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1)
-                } else {
-                  myself.removeFileFromQueue(messageData.fileId, messageData.fileId);
-                  var error = res.statusCode;
-                  var message = res.statusMessage;
-                  if(myself.ec2Proxy) {
-                	  error = response.response;
-                	  message = response.message;
-                  }
-                  myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: error, message: message});
-                }
-              }
-            }
-        });
-        
-    }).on('error', function(err) {
-    	  if(retryIterator == undefined) {retryIterator = 1;}
-	      if(retryIterator < 5) {
-	        setTimeout(function() {
-	          myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1);
-	        }, retryIterator*1000);
-	      } else {
-	        //If we fail 5 times and are not using the proxy, flip the proxy switch and try again
-	        if (! myself.ec2Proxy )
-	        {
-	          myself.ec2Proxy = true;
-	          retryIterator = 0;
-	          setTimeout(function() {
-	            myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1);
-	          }, retryIterator*1000);
-	        }
-	        else
-	        {
-	        	myself.removeFileFromQueue(messageData.fileId, messageData.fileId);
-	            myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: err.statusMessage, message: "A server error occurred - Please try again."});
-	        }
-	      }  
-    });
-    
-    if (myself.ec2Proxy) {
-      req.write(Buffer.from(multiPartForm.buffer));
+        url = myself.uploadUrls[fileId][filePart];
+        method = "PUT";
+        contentLength = Buffer.from(encryptedFile.file).length;
+        request = new FetchRequest({signedRequest: false});
+        request = request.sendRequest(url, {method: method, headers: {'Content-Length': contentLength}, body: Buffer.from(encryptedFile.file), timeout: 25000});
     } else {
-      req.write(Buffer.from(encryptedFile.file));
+        request = request.sendSignedRequest({url: url, HTTPMethod: method, mimetype: 'multipart/form-data; boundary=' + boundary, messageData: messageData}, multiPartForm.buffer);
     }
-    req.end();
-      
-    // Add event listener so we can abort the upload if we have to.
-    var eventId = myself.eventHandler.bind(myself.UPLOAD_ABORT_EVENT, function(data) {
-      if(data.fileId == messageData.fileId) {
-        req.end();
-      }
+
+    request.then(function(response) {
+        res = response;
+        if(response.status !== 200) {
+            throw new Error('retry');
+        } else if (response.status === 200 && response.headers.has('content-type') && response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
+            return response.json();
+        }
+    }).then(function(responseData) {
+        uploadCb({loaded: contentLength});
+        let response = {response:"SERVER_ERROR", message: "A server error has occurred, please try again."};
+        if(myself.ec2Proxy && responseData !== undefined){
+            response = responseData;
+        }
+        if(myself.ec2Proxy && response.response === "LIMIT_EXCEEDED") {
+            myself.eventHandler.raise(myself.LIMIT_EXCEEDED_EVENT, {error: response.message});
+        } else if(myself.ec2Proxy && response.response === "AUTHENTICATION_FAILED") {
+            myself.removeFileFromQueue(messageData.fileId);
+            myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: 'AUTHENTICATION_FAILED', message: response.message});
+        } else if( (myself.ec2Proxy && response.response === "SUCCESS") || (! myself.ec2Proxy && res.status === 200) ) {
+            let discard = myself.uploading.shift();
+            discard = null;
+
+            if(encryptedFile.part === encryptedFile.parts) {
+                if (! myself.ec2Proxy) {
+                    let counter = 0;
+                    myself.markFileComplete(packageId, fileId, a_sync, function() { done_callback(packageId, fileId, filesize, filename); }, function() { myself.eventHandler.raise(myself.SERVER_ERROR_EVENT, {error: "FILE_INCOMPLETE", message: "Your file did not upload completely. Please refresh and try again."});}, counter);
+                } else {
+                    done_callback(packageId, fileId, filesize, filename);
+                }
+            }
+            if(myself.uploading.length !== 0){
+                myself.nextUploadFile(done_callback, progress_callback);
+            }
+        } else {
+            if(myself.markedAsDeleted[messageData.fileId] === undefined) {
+                if(retryIterator === undefined) {retryIterator = 1;}
+                if(retryIterator < 5) {
+                    myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1)
+                } else {
+                    myself.removeFileFromQueue(messageData.fileId, messageData.fileId);
+                    let error = res.status;
+                    let message = res.statusText;
+                    if(myself.ec2Proxy) {
+                        error = response.response;
+                        message = response.message;
+                    }
+                    myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: error, message: message});
+                }
+            }
+        }
+    }).catch(function(err) {
+        if(retryIterator === undefined) {retryIterator = 1;}
+        if(retryIterator < 5) {
+            setTimeout(function() {
+                myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1);
+            }, retryIterator*1000);
+        } else {
+            //If we fail 5 times and are not using the proxy, flip the proxy switch and try again
+            if (! myself.ec2Proxy ) {
+                myself.ec2Proxy = true;
+                retryIterator = 0;
+                setTimeout(function() {
+                    myself.SendPart(requestType, messageData, boundary, filesize, encryptedFile, filename, uploadCb, a_sync, packageId, done_callback, progress_callback, retryIterator+1);
+                }, retryIterator*1000);
+            } else {
+                myself.removeFileFromQueue(messageData.fileId, messageData.fileId);
+                myself.eventHandler.raise(myself.UPLOAD_ERROR_EVENT, {error: err.code, message: "A server error occurred - Please try again."});
+            }
+        }
     });
   }
 
