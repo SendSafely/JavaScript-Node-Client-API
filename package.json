@@ -1,6 +1,6 @@
 {
   "name": "@sendsafely/sendsafely",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "main": "./lib/SendSafely.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,9 +10,9 @@
   "description": "The SendSafely JavaScript SDK for Node.js lets you integrate SendSafely secure data transfer capabilities directly into your Node.js application.",
   "dependencies": {
     "jquery": "^3.4.1",
-    "make-fetch-happen": "^10.2.1",
-    "openpgp": "4.5.5",
-    "sjcl": "^1.0.8",
+    "make-fetch-happen": "^11.1.1",
+    "openpgp": "4.10.11",
+    "sjcl": "1.0.8",
     "window": "^4.2.7",
     "xmlhttprequest": "^1.8.0"
   },
