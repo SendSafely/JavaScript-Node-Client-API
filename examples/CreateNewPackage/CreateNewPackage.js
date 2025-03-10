@@ -101,19 +101,13 @@ function step3() {
     sendSafely.encryptAndUploadMessage(newPackageId, newKeyCode, newServerSecret, "This is a test package from Node.js", function(encryptedMessage) {
         console.log("Message Added");
         console.log("Adding Recipients");
-        for (var i = 0; i < recipientsToAdd.length; i++) {
-            sendSafely.addRecipient(newPackageId, recipientsToAdd[i], undefined, function(finished) {
-                recipientAddedCount++;
-                console.log("Recipient " + recipientAddedCount + " added");
-                if (recipientAddedCount == recipientsToAdd.length) {
-                	console.log("Finalizing Package");
-                    sendSafely.finalizePackage(newPackageId, newPackageCode, newKeyCode, function(done) {
-                        console.log("Secure Link: " + done);
-                        step4();
-                    });
-                }
-            })
-        }
+        sendSafely.addRecipients(newPackageId, recipientsToAdd, undefined, function(finished) {
+            console.log("Finalizing Package");
+            sendSafely.finalizePackage(newPackageId, newPackageCode, newKeyCode, function(done) {
+                console.log("Secure Link: " + done);
+                step4();
+            });
+        });
     });
 }
 
