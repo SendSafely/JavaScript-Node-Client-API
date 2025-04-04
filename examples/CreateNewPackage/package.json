@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@sendsafely/sendsafely": "^1.x.x"
+    "@sendsafely/sendsafely": "^2.x.x"
   },
   "name": "createnewpackage",
   "version": "1.0.0",

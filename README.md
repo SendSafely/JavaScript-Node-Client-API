@@ -3,6 +3,12 @@
 
 The SendSafely JavaScript API for Node.js lets you integrate SendSafely secure data transfer capabilities directly into your Node.js application. 
 
+## Requirements
+
+- **Node.js**: v18 or higher *(required starting from SDK v2.0.0)*
+
+Please ensure you upgrade to Node v18 to take advantage of the latest features and maintain compatibility with our SDK v2.0.0 and later.
+
 ## Quickstart
 The example below shows you how to install the package and use it as a CommonJS module.
 
