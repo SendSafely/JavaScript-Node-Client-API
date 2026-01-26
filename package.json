@@ -14,7 +14,7 @@
   "dependencies": {
     "jquery": "^3.4.1",
     "jsdom": "^26.0.0",
-    "make-fetch-happen": "^11.1.1",
+    "make-fetch-happen": "^14.0.1",
     "openpgp": "6.1.1",
     "sjcl": "1.0.8",
     "xmlhttprequest": "^1.8.0"
