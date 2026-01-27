@@ -5,9 +5,9 @@ The SendSafely JavaScript API for Node.js lets you integrate SendSafely secure d
 
 ## Requirements
 
-- **Node.js**: v18 or higher *(required starting from SDK v2.0.0)*
+- **Node.js**: v24 or higher *(required starting from SDK v3.0.0)*
 
-Please ensure you upgrade to Node v18 to take advantage of the latest features and maintain compatibility with our SDK v2.0.0 and later.
+Please ensure you upgrade to Node v24 to take advantage of the latest features and maintain compatibility with our SDK v3.0.0 and later.
 
 ## Quickstart
 The example below shows you how to install the package and use it as a CommonJS module.
