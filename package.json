@@ -1,6 +1,6 @@
 {
   "name": "@sendsafely/sendsafely",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "main": "./lib/SendSafely.js",
   "engines": {
     "node": ">=24.0.0"
