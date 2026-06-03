@@ -1,7 +1,10 @@
 {
   "name": "@sendsafely/sendsafely",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "main": "./lib/SendSafely.js",
+  "files": [
+    "lib/"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
@@ -16,7 +19,6 @@
     "jsdom": "^26.0.0",
     "make-fetch-happen": "^15.0.3",
     "openpgp": "6.3.0",
-    "sjcl": "1.0.9",
     "xmlhttprequest": "^1.8.0"
   },
   "repository": {
