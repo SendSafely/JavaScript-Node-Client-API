@@ -1,10 +1,11 @@
 {
   "name": "@sendsafely/sendsafely",
-  "version": "3.0.7",
+  "version": "3.1.0",
   "main": "./lib/SendSafely.js",
   "files": [
     "lib/"
   ],
+  "types": "./lib/SendSafely.d.ts",
   "engines": {
     "node": ">=24.0.0"
   },
