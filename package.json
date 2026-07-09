@@ -1,13 +1,13 @@
 {
   "name": "@sendsafely/sendsafely",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "main": "./lib/SendSafely.js",
   "files": [
     "lib/"
   ],
   "types": "./lib/SendSafely.d.ts",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=24.5.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,11 +16,7 @@
   "license": "Apache-2.0",
   "description": "The SendSafely JavaScript SDK for Node.js lets you integrate SendSafely secure data transfer capabilities directly into your Node.js application.",
   "dependencies": {
-    "jquery": "^3.4.1",
-    "jsdom": "^26.0.0",
-    "make-fetch-happen": "^15.0.3",
-    "openpgp": "6.3.0",
-    "xmlhttprequest": "^1.8.0"
+    "openpgp": "6.3.0"
   },
   "repository": {
     "type": "git",
