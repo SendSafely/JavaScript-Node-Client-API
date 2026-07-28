@@ -11,5 +11,9 @@
   },
   "author": "",
   "license": "",
-  "description": ""
+  "description": "",
+  "engines": {
+    "node": ">=24.14.1",
+    "npm": ">=11.10.0"
+  }
 }

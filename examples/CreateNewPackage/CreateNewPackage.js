@@ -18,11 +18,30 @@ var privateKey = ""
 var publicKeyId = "";
 var files = [];
 	
-//var sendSafely = new SendSafely("https://demo.sendsafely.com", "exAPIkeyxyz", "exAPIsecretxyz");
-var sendSafely = new SendSafely("https://ORGANIZATION_HOST", "API_KEY", "API_SECRET");
+// --- Authentication: choose ONE mode ------------------------------------------
+// OAuth Bearer: set TOKEN to an access token (takes precedence when non-empty).
+// HMAC API key: leave TOKEN empty and set API_KEY + API_SECRET.
+// Fill these in manually before running.
+// NOTE: this script uses Trusted Device key operations (generateKeyPair in step1,
+// getKeycode in step4), which are NOT available under OAuth in v1. When TOKEN is set
+// (OAuth mode) the script automatically skips those two steps — createPackage mints
+// its own keyCode. With HMAC (TOKEN empty, API_KEY/API_SECRET set) it runs the full
+// Trusted Device flow.
+var HOST = "https://ORGANIZATION_HOST";
+var TOKEN = "";                 // OAuth access token; non-empty => OAuth Bearer mode
+var API_KEY = "API_KEY";        // used only when TOKEN is empty
+var API_SECRET = "API_SECRET";  // used only when TOKEN is empty
 
+var sendSafely = TOKEN
+    ? SendSafely.withBearerToken(HOST, TOKEN)
+    : new SendSafely(HOST, API_KEY, API_SECRET);
+var oauthMode = !!TOKEN;   // when true, skip Trusted Device steps (not OAuth-eligible in v1)
+
+// Register event handlers (incl. sendsafely.error) BEFORE the first call so auth
+// failures during verifyCredentials (e.g. an expired token -> OAUTH_TOKEN_INVALID)
+// are printed instead of being silently dropped.
+initEvents();
 sendSafely.verifyCredentials(function(email) {
-	initEvents();
     console.log("Connected to SendSafely as user " + email);
     getFiles();
 });
@@ -39,7 +58,7 @@ function initEvents() {
 	});
 	
 	sendSafely.on('sendsafely.error', function(error, errorMsg) {
-	    console.log(error)
+	    console.log('Error:', error, errorMsg || '');
 	});
 }
 
@@ -64,6 +83,13 @@ function getFiles() {
 }
 
 function step1() {
+	// Trusted Device key operations are not available under OAuth in v1, so skip key-pair
+	// generation and create the package directly (createPackage mints its own keyCode).
+	if (oauthMode) {
+		console.log("OAuth mode — skipping Trusted Device key pair generation");
+		step2();
+		return;
+	}
 	console.log("Generate new key pair")
 	sendSafely.generateKeyPair("Node example",false,function(privateKey, publicKey){
 		console.log("New key pair generated");
@@ -105,7 +131,8 @@ function step3() {
             console.log("Finalizing Package");
             sendSafely.finalizePackage(newPackageId, newPackageCode, newKeyCode, function(done) {
                 console.log("Secure Link: " + done);
-                step4();
+                // getKeycode (step4) is a Trusted Device op, unavailable under OAuth — skip to step5.
+                if (oauthMode) { step5(); } else { step4(); }
             });
         });
     });
