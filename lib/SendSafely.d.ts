@@ -107,6 +107,10 @@ declare class SendSafely {
   syncKeycodes(privateKey: any, publicKeyId: any, callback: (...args: any[]) => void): void;
   sendFeedback(log: any, stacktrace: any, systemInfo: any): void;
   sendSignedRequest(endpoint: any, HTTPMethod: any, mimeType: any, requestData: any, successCallback: (...args: any[]) => void, customErrorEvent?: any): void;
+
+  // OAuth Bearer mode: replaces the cached access token used on subsequent
+  // requests (no-op for HMAC instances). Pairs with SendSafely.withBearerToken.
+  setAccessToken(t: any): void;
 }
 
 declare namespace SendSafely {
@@ -116,6 +120,13 @@ declare namespace SendSafely {
   const SDK_VERSION_VALUE: any;
   const CLIENT_VERSION_HEADER: any;
   function setClientVersion(v: any): void;
+
+  // Static factory for OAuth Bearer mode: returns a SendSafely instance that
+  // authenticates with the given access token instead of an HMAC api key/secret.
+  // Requires an https:// URL and a non-empty token (throws otherwise). Exception:
+  // http://localhost and http://127.0.0.1 are permitted for local development and
+  // testing only — never point a real token at a plaintext URL.
+  function withBearerToken(url: any, token: any, requestAPI?: any): SendSafely;
 
   // Public sub-constructor. At runtime this is a factory that returns a full
   // SendSafely instance (`new SendSafely(url, dropzoneId, null)`)

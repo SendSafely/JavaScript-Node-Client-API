@@ -20,14 +20,24 @@ var privateKey = ""
 var publicKeyId = "";
 var files = [];
 
-var API_HOST = process.env.API_HOST || "https://123xyz.sendsafely.com";
-var API_KEY = process.env.API_KEY || "123xyz";
-var API_SECRET = process.env.API_SECRET || "123xyz";
+// --- Authentication: choose ONE mode ------------------------------------------
+// OAuth Bearer: set TOKEN to an access token (takes precedence when non-empty).
+// HMAC API key: leave TOKEN empty and set API_KEY + API_SECRET.
+// Values come from the environment when set, otherwise fill in the fallbacks manually.
+var HOST = process.env.API_HOST || "https://123xyz.sendsafely.com";
+var TOKEN = process.env.OAUTH_TOKEN || "";       // OAuth access token; non-empty => OAuth Bearer mode
+var API_KEY = process.env.API_KEY || "API_KEY";          // used only when TOKEN is empty
+var API_SECRET = process.env.API_SECRET || "API_SECRET"; // used only when TOKEN is empty
 
-var sendSafely = new SendSafely(API_HOST,API_KEY,API_SECRET);
+var sendSafely = TOKEN
+    ? SendSafely.withBearerToken(HOST, TOKEN)
+    : new SendSafely(HOST, API_KEY, API_SECRET);
 
+// Register event handlers (incl. sendsafely.error) BEFORE the first call so auth
+// failures during verifyCredentials (e.g. an expired token -> OAUTH_TOKEN_INVALID)
+// are printed instead of being silently dropped.
+initEvents();
 sendSafely.verifyCredentials(function(email) {
-    initEvents();
     console.log("Connected to SendSafely as user " + email);
     getFiles();
 });
@@ -44,7 +54,7 @@ function initEvents() {
     });
 
     sendSafely.on('sendsafely.error', function(error, errorMsg) {
-        console.log(error)
+        console.log('Error:', error, errorMsg || '');
     });
 }
 
@@ -78,7 +88,7 @@ function step1() {
         console.log("KeyCode: " + keyCode);
         console.log("Server Secret: " + serverSecret);
         console.log("Package Code: " + packageCode);
-        workspaceSecureLink = API_HOST + workspaceURL + newPackageCode + '#keycode=' + newKeyCode;
+        workspaceSecureLink = HOST + workspaceURL + newPackageCode + '#keycode=' + newKeyCode;
         console.info("Workspace link: " + workspaceSecureLink);
         sendSafely.packageInformation(newPackageId,function(res) {
             sendSafely.createSubdirectory(newPackageId, "Example Folder", res.rootDirectoryId, function (directory) {
